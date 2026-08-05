@@ -1,0 +1,881 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ChevronLeft, ChevronRight, Users, Gavel, Clock, RotateCcw, Radio, Eye } from "lucide-react";
+
+// ---- Sample data, transcribed from the 2026 JDC Chubu one-day competition schedule ----
+const RAW = [
+  [1, "10:30", "アマ・ボールルーム", "B級", "WT", "1次予選", 3, 30, 24, "D", "0:12:00"],
+  [2, "10:42", "アマ・ボールルーム", "C級", "W", "1次予選", 2, 16, 12, "C", "0:04:30"],
+  [3, "10:46", "アマ・ボールルーム", "オープン", "WTFQ", "1次予選", 2, 15, 12, "F", "0:16:00"],
+  [4, "11:02", "アマ・ボールルーム", "D級", "F", "1次予選", 1, 9, 6, "D", "0:02:30"],
+  [5, "11:05", "アマ・ボールルーム", "B級", "WT", "2次予選", 2, 24, 12, "D", "0:08:00"],
+  [6, "11:13", "アマ・ボールルーム", "ソロダンス", "T", "1次予選", 1, 4, 4, "E", "0:02:00"],
+  [7, "11:15", "アマ・ボールルーム", "C級", "Q", "1次予選", 1, 11, 6, "D", "0:02:30"],
+  [8, "11:17", "アマ・ボールルーム", "ソロダンス", "W", "1次予選", 1, 2, 2, "E", "0:02:00"],
+  [9, "11:19", "アマ・ボールルーム", "D級", "T", "1次予選", 1, 9, 6, "C", "0:02:00"],
+  [10, "11:21", "アマ・ボールルーム", "ソロダンス", "T", "決勝", 1, 4, null, "E", "0:03:00"],
+  [11, "11:24", "アマ・ボールルーム", "C級", "W", "準決勝", 1, 12, 6, "C", "0:02:30"],
+  [12, "11:27", "アマ・ボールルーム", "ソロダンス", "W", "決勝", 1, 2, null, "E", "0:03:00"],
+  [13, "11:30", "アマ・ボールルーム", "B級", "WT", "準決勝", 1, 12, 6, "D", "0:04:00"],
+  [14, "11:34", "プロ・ラテン", "BCD級", "CP", "1次予選", 1, 1, 1, "E", "0:03:00"],
+  [15, "11:37", "アマ・ボールルーム", "オープン", "WTFQ", "準決勝", 1, 12, 6, "F", "0:09:00"],
+  [16, "11:46", "プロ・ラテン", "オープン", "CSRP", "1次予選", 1, 8, 6, "B", "0:08:00"],
+  [17, "11:54", "アマ・ボールルーム", "D級", "F", "決勝", 1, 6, null, "D", "0:03:00"],
+  [18, "11:57", "アマ・ボールルーム", "C級", "Q", "決勝", 1, 6, null, "D", "0:03:00"],
+  [19, "12:00", "break", "ブレイク", "", "", 0, 0, null, "", "0:01:00"],
+  [20, "12:01", "アマ・ボールルーム", "D級", "T", "決勝", 1, 6, null, "C", "0:03:00"],
+  [21, "12:04", "アマ・ボールルーム", "C級", "W", "決勝", 1, 6, null, "C", "0:03:00"],
+  [22, "12:07", "break", "ブレイク", "", "", 0, 0, null, "", "0:01:00"],
+  [23, "12:08", "アマ・ボールルーム", "B級", "WT", "決勝", 1, 6, null, "D", "0:04:30"],
+  [24, "12:12", "プロ・ラテン", "BCD級", "CP", "決勝", 1, 1, null, "E", "0:04:00"],
+  [25, "12:16", "アマ・ボールルーム", "オープン", "WTFQ", "決勝", 1, 6, null, "F", "0:09:30"],
+  [26, "12:26", "プロ・ラテン", "オープン", "CSRP", "決勝", 1, 6, null, "B", "0:08:30"],
+  [27, "12:34", "ceremony", "前半競技表彰式", "", "", 0, 0, null, "", "0:20:00"],
+  [28, "12:54", "break", "フロアー清掃", "", "", 0, 0, null, "", "0:03:00"],
+  [29, "12:57", "アマ・ラテン", "ソロダンス", "C", "1次予選", 1, 8, 6, "C", "0:02:00"],
+  [30, "12:59", "アマ・ラテン", "ラテンダブルス", "R", "1次予選", 1, 1, 1, "E", "0:02:00"],
+  [31, "13:01", "アマ・ラテン", "C級", "C", "1次予選", 1, 5, 5, "E", "0:02:00"],
+  [32, "13:03", "アマ・ラテン", "ソロダンス", "R", "1次予選", 1, 7, 6, "C", "0:02:00"],
+  [33, "13:05", "アマ・ラテン", "ラテンダブルス", "C", "1次予選", 1, 1, 1, "E", "0:02:00"],
+  [34, "13:07", "アマ・ラテン", "B級", "SP", "1次予選", 1, 9, 6, "C", "0:04:00"],
+  [35, "13:11", "プロ・ボールルーム", "CDN級", "WF", "1次予選", 1, 3, 3, "E", "0:03:00"],
+  [36, "13:14", "アマ・ラテン", "ソロダンス", "C", "決勝", 1, 6, null, "C", "0:03:00"],
+  [37, "13:17", "アマ・ラテン", "ラテンダブルス", "R", "決勝", 1, 1, null, "E", "0:02:30"],
+  [38, "13:20", "アマ・ラテン", "C級", "C", "決勝", 1, 5, null, "E", "0:03:00"],
+  [39, "13:23", "アマ・ラテン", "ソロダンス", "R", "決勝", 1, 6, null, "C", "0:03:00"],
+  [40, "13:26", "アマ・ラテン", "ラテンダブルス", "C", "決勝", 1, 1, null, "E", "0:02:30"],
+  [41, "13:28", "アマ・ラテン", "B級", "SP", "決勝", 1, 6, null, "C", "0:04:30"],
+  [42, "13:33", "プロ・ボールルーム", "CDN級", "WF", "決勝", 1, 3, null, "E", "0:04:30"],
+  [43, "13:37", "ceremony", "後半競技表彰式", "", "", 0, 0, null, "", "0:10:00"],
+  [44, "13:47", "show", "ワクワクダンスタイム", "", "", 0, 0, null, "", "0:25:00"],
+  [45, "14:12", "break", "フロアー清掃", "", "", 0, 0, null, "", "0:03:00"],
+  [46, "14:15", "ceremony", "主催者挨拶・審査員紹介・入場行進・トロフィー返還・実行委員長挨拶", "", "", 0, 0, null, "", "0:15:00"],
+  [47, "14:30", "シニア60・ボールルーム", "選手権", "WTF", "1次予選", 2, 21, 12, "F", "0:12:00"],
+  [48, "14:42", "プロ・ボールルーム", "選手権", "WTFQ", "1次予選", 2, 15, 12, "A", "0:16:00"],
+  [49, "14:58", "シニア60・ボールルーム", "選手権", "WTF", "準決勝", 1, 12, 6, "F", "0:07:00"],
+  [50, "15:05", "アマ・ラテン", "選手権", "CSRPJ", "1次予選", 1, 9, 6, "B", "0:11:00"],
+  [51, "15:16", "show", "プレミアムデモンストレーション", "", "", 0, 6, null, "", "0:30:00"],
+  [52, "15:46", "show", "チャリティー抽選会", "", "", 0, 0, null, "", "0:20:00"],
+  [53, "16:06", "プロ・ボールルーム", "選手権", "WTVFQ", "準決勝", 1, 12, 6, "A", "0:10:00"],
+  [54, "16:16", "show", "シニア60・ボールルーム決勝進出選手 ソロダンス", "", "", 0, 6, null, "", "0:08:00"],
+  [55, "16:24", "シニア60・ボールルーム", "選手権", "WTF", "決勝", 1, 6, null, "F", "0:07:30"],
+  [56, "16:32", "show", "アマ・ラテンアメリカン決勝進出選手 ソロダンス", "", "", 0, 6, null, "", "0:08:00"],
+  [57, "16:40", "アマ・ラテン", "選手権", "CSRPJ", "決勝", 1, 6, null, "B", "0:11:30"],
+  [58, "16:51", "show", "プロ・ボールルーム決勝進出選手 ソロダンス", "", "", 0, 6, null, "", "0:08:00"],
+  [59, "16:59", "プロ・ボールルーム", "選手権", "WTVFQ", "決勝", 1, 6, null, "A", "0:10:30"],
+  [60, "17:10", "ceremony", "ベストカップル賞・ベストクイーン賞 表彰式", "", "", 0, 0, null, "", "0:05:00"],
+  [61, "17:15", "ceremony", "オナーダンス・選手権表彰式", "", "", 0, 0, null, "", "0:25:00"],
+  [62, "17:40", "ceremony", "閉会", "", "", 0, 0, null, "", "0:00:00"],
+];
+
+const FIELDS = ["no", "time", "section", "cls", "event", "round", "heat", "pairs", "up", "judge", "duration"];
+const ITEMS = RAW.map((row) => Object.fromEntries(FIELDS.map((f, i) => [f, row[i]])));
+
+const isSpecial = (section) => ["break", "ceremony", "show"].includes(section);
+
+// ---- Real entry list, transcribed from the uploaded クラス別出場選手一覧表 ----
+// Bib numbers are not officially assigned yet, so a test number is generated per unique
+// couple/individual here (in order of first appearance) purely so the search UI can be tried.
+const ENTRY_GROUPS = [
+  { section: "アマ・ボールルーム", cls: "B級", event: "WT", pairs: [
+    ["有賀 義隆", "国枝 敬子"], ["安藤 勉", "新海 典江"], ["安藤 安夫", "上野 清美"], ["石原 逸郎", "石原 恵美子"],
+    ["宇野 幸男", "本田 久仁子"], ["岡田 洋", "岡田 みどり"], ["小川 遥叶", "村瀬 稚奈"], ["尾﨑 直也", "林 仁美"],
+    ["加藤 紀彦", "太田 玲子"], ["國田 慎弥", "櫻井 玲奈"], ["黒田 敦也", "河合 琴香"], ["近藤 貞司", "近藤 知子"],
+    ["柴垣 宏行", "福瀧 愛子"], ["杉山 久八", "北澤 由美子"], ["鈴木 啓太", "田中 清羽"], ["関 守", "岡谷 恵美子"],
+    ["髙橋 錦司", "田原 美緒"], ["塚田 淑慈", "徳永 真唯"], ["丹野 吉道", "丹野 いづみ"], ["服部 清", "米津 由里"],
+    ["原田 則夫", "原田 真由美"], ["細井 良彦", "細井 和子"], ["本田 優", "榊原 美加"], ["前原 勝明", "前原 真理子"],
+    ["松村 清孝", "鈴木 久美子"], ["峰 裕一", "横山 七奈子"], ["本倉 拓朗", "宮永 安珠"], ["森本 貴大", "島地 由利江"],
+    ["和佐田 結樹", "遠山 彩恵"],
+  ]},
+  { section: "アマ・ボールルーム", cls: "C級", event: "W", pairs: [
+    ["浅井 清史", "浅井 裕子"], ["伊藤 成輝", "櫻井 友子"], ["岩男 昭則", "庄屋 貴鳳"], ["岩崎 幸司", "村田 愛子"],
+    ["叶 龍人", "丹羽 緑"], ["近藤 由秋", "武生 和江"], ["佐野 寛", "那須 恵子"], ["鈴木 真澄", "山口 年枝"],
+    ["髙橋 錦司", "田原 美緒"], ["塚田 淑慈", "徳永 真唯"], ["中村 俊哉", "中村 真理子"], ["野々山 史男", "野々山 千世代"],
+    ["原田 則夫", "原田 真由美"], ["平野 文美", "村上 久美子"], ["峰 裕一", "横山 七奈子"], ["森本 貴大", "島地 由利江"],
+  ]},
+  { section: "アマ・ボールルーム", cls: "オープン", event: "WTFQ", pairs: [
+    ["牛田 基彦", "牛田 紀世美"], ["小川 遥叶", "村瀬 稚奈"], ["奥薗 信人", "小池 理紗"], ["樫原 康太", "加藤 みなみ"],
+    ["加藤 大喜", "小森 菜々美"], ["加納 弘章", "井藤 あや"], ["髙橋 竜太", "平良 早耶花"], ["髙谷 智史", "北川 明歩"],
+    ["徳良 和之", "加納 羽華"], ["細江 耕平", "河岸 来実"], ["村上 和穂", "金子 真弓"], ["本倉 拓朗", "宮永 安珠"],
+    ["山川 太一", "蒲江 里奈"], ["山下 雄大", "小川 美玲"], ["山下 慶太郎", "池田 綾香"],
+  ]},
+  { section: "アマ・ボールルーム", cls: "D級", event: "F", pairs: [
+    ["浅井 英一", "戸成 佐代子"], ["池田 永", "池田 京子"], ["井戸 博", "井戸 好子"], ["伊藤 勇祐", "河北 直美"],
+    ["叶 龍人", "丹羽 緑"], ["近藤 由秋", "武生 和江"], ["佐野 寛", "那須 恵子"], ["柴田 年男", "横田 絹代"],
+    ["平田 富夫", "山本 宰子"],
+  ]},
+  { section: "アマ・ボールルーム", cls: "D級", event: "T", pairs: [
+    ["浅井 英一", "戸成 佐代子"], ["池田 永", "池田 京子"], ["井戸 博", "井戸 好子"], ["伊藤 勇祐", "河北 直美"],
+    ["叶 龍人", "丹羽 緑"], ["近藤 由秋", "武生 和江"], ["佐野 寛", "那須 恵子"], ["柴田 年男", "横田 絹代"],
+    ["平田 富夫", "山本 宰子"],
+  ]},
+  { section: "アマ・ボールルーム", cls: "C級", event: "Q", pairs: [
+    ["浅井 清史", "浅井 裕子"], ["伊藤 成輝", "櫻井 友子"], ["岩男 昭則", "庄屋 貴鳳"], ["佐野 寛", "那須 恵子"],
+    ["鈴木 真澄", "山口 年枝"], ["髙橋 錦司", "田原 美緒"], ["中村 俊哉", "中村 真理子"], ["野々山 史男", "野々山 千世代"],
+    ["峰 裕一", "横山 七奈子"], ["森 正吉", "尾高 妙子"], ["森本 貴大", "島地 由利江"],
+  ]},
+  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "T", solo: ["奥薗 信人", "小池 理紗", "川路 賢次", "松川 稀"] },
+  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "W", solo: ["川路 賢次", "松川 稀"] },
+  { section: "プロ・ラテン", cls: "BCD級", event: "CP", pairs: [["小森 康裕", "滝川 和美"]] },
+  { section: "プロ・ラテン", cls: "オープン", event: "CSRP", pairs: [
+    ["岩本 憲幸", "稲垣 はる美"], ["勝川 佳和", "清水 佳奈子"], ["勝野 出", "浅海 愛"], ["金原 亮司", "永原 由貴"],
+    ["小森 康裕", "滝川 和美"], ["平柳 諒悟", "佐田 みづほ"], ["村上 知哉", "村田 佳澄"], ["山﨑 雅則", "河内 知子"],
+  ]},
+  { section: "アマ・ラテン", cls: "ソロダンス", event: "C", solo: ["Nikita", "池田 綾香", "大石 彩世", "小栗 沙永子", "杉田 則子", "辰巳 則子", "日高 芽生"] },
+  { section: "アマ・ラテン", cls: "ソロダンス", event: "R", solo: ["Nikita", "池田 綾香", "大石 彩世", "小栗 沙永子", "杉田 則子", "辰巳 則子"] },
+  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "R", pairs: [["松野 日向子", "中村 瑠緋菜"]] },
+  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "C", pairs: [["松野 日向子", "中村 瑠緋菜"]] },
+  { section: "アマ・ラテン", cls: "C級", event: "C", pairs: [
+    ["髙橋 錦司", "田原 美緒"], ["野々山 史男", "野々山 千世代"], ["平野 文美", "村上 久美子"], ["峰 裕一", "横山 七奈子"],
+    ["吉田 茂", "酒井 美早子"],
+  ]},
+  { section: "アマ・ラテン", cls: "B級", event: "SP", pairs: [
+    ["岩男 昭則", "庄屋 貴鳳"], ["岩崎 幸司", "村田 愛子"], ["関 守", "岡谷 恵美子"], ["寺澤 光", "青木 聖奈"],
+    ["戸田 光志", "戸田 ひろ子"], ["原田 則夫", "原田 真由美"], ["森 正吉", "尾高 妙子"], ["山本 明", "山本 晴美"],
+    ["山本 立樹", "山本 夕貴"],
+  ]},
+  { section: "プロ・ボールルーム", cls: "CDN級", event: "WF", pairs: [
+    ["安藤 裕一", "河内 芳江"], ["伊藤 圭一", "廣瀬 久美"], ["村上 知哉", "村田 佳澄"],
+  ]},
+  { section: "シニア60・ボールルーム", cls: "選手権", event: "WTF", pairs: [
+    ["阿部 正三", "阿部 里美"], ["安藤 勉", "新海 典江"], ["安藤 安夫", "上野 清美"], ["石原 逸郎", "石原 恵美子"],
+    ["井上 雅幹", "井上 啓子"], ["岡田 浩之", "岡田 やす江"], ["尾﨑 直也", "林 仁美"], ["近藤 貞司", "近藤 知子"],
+    ["佐藤 寛", "小西 ゆり子"], ["早苗 哲也", "渡辺 郁子"], ["柴垣 宏行", "福瀧 愛子"], ["杉山 久八", "北澤 由美子"],
+    ["須藤 進", "小林 椿"], ["関 守", "岡谷 恵美子"], ["戸田 光志", "戸田 ひろ子"], ["服部 清", "米津 由里"],
+    ["早川 明彦", "杉浦 節子"], ["平松 成文", "原 映子"], ["本田 優", "榊原 美加"], ["村上 和穂", "金子 真弓"],
+    ["吉田 茂", "酒井 美早子"],
+  ]},
+  { section: "プロ・ボールルーム", cls: "選手権", event: "WTFQ", pairs: [
+    ["岩本 憲幸", "稲垣 はる美"], ["太田 雅士", "太田 薫"], ["岡 俊宏", "岡 瑞紀"], ["勝川 佳和", "清水 佳奈子"],
+    ["勝野 出", "浅海 愛"], ["楠本 和嵩", "加納 杏那"], ["柴田 真希", "柴田 綾子"], ["柴山 和樹", "平岩 英里"],
+    ["竹内 大祐", "竹内 桃子"], ["中野 雅章", "中野 由美恵"], ["新美 一輝", "山口 ひかり"], ["野田 幹也", "広瀬 真名"],
+    ["村澤 俊也", "鈴木 伶奈"], ["森田 貴久", "木全 志穂"], ["山﨑 雅則", "河内 知子"],
+  ]},
+  { section: "アマ・ラテン", cls: "選手権", event: "CSRPJ", pairs: [
+    ["櫻庭 幸哉", "神谷 さくら"], ["小栗 歩", "小栗 沙永子"], ["加藤 大喜", "小森 菜々美"], ["纈纈 大貴", "篠田 雛多"],
+    ["佐々木 寛斗", "加藤 紗理"], ["高橋 大最", "内川 摩耶"], ["西松 大翔", "森下 夏妃"], ["室戸 啓汰", "野田 麻緒"],
+    ["山下 慶太郎", "池田 綾香"],
+  ]},
+];
+
+// プロ・ボールルーム選手権は準決勝/決勝が原簿では "WTVFQ" 表記になっているため、検索用に同一グループ扱いにする
+const normalizeEvent = (event) => (event === "WTVFQ" ? "WTFQ" : event);
+
+function buildParticipantIndex() {
+  const registry = new Map(); // person/couple name -> test bib number
+  let nextBib = 1;
+  const index = {};
+  const roster = [];
+
+  ENTRY_GROUPS.forEach((g) => {
+    const matches = ITEMS.filter(
+      (it) => !isSpecial(it.section) && it.section === g.section && it.cls === g.cls && normalizeEvent(it.event) === g.event
+    );
+    const firstItem = matches.reduce((a, b) => (a.no < b.no ? a : b), matches[0] || { time: "", no: 9999 });
+    const entries = g.pairs ? g.pairs.map((p) => p.join(" ・ ")) : g.solo;
+    const rosterEntries = [];
+
+    entries.forEach((name) => {
+      let bib = registry.get(name);
+      if (!bib) {
+        bib = String(nextBib++);
+        registry.set(name, bib);
+      }
+      if (!index[bib]) index[bib] = [];
+      index[bib].push({ section: g.section, cls: g.cls, event: g.event, time: firstItem.time, no: firstItem.no, name });
+      rosterEntries.push({ bib, name });
+    });
+
+    roster.push({ section: g.section, cls: g.cls, event: g.event, time: firstItem.time, no: firstItem.no, entries: rosterEntries });
+  });
+
+  roster.sort((a, b) => a.no - b.no);
+  const groupEntries = new Map();
+  roster.forEach((g) => groupEntries.set(`${g.section}|${g.cls}|${g.event}`, g.entries));
+
+  return { index, registry, roster, groupEntries };
+}
+const { groupEntries: GROUP_ENTRIES } = buildParticipantIndex();
+
+function entriesForItem(item) {
+  if (isSpecial(item.section)) return null;
+  return GROUP_ENTRIES.get(`${item.section}|${item.cls}|${normalizeEvent(item.event)}`) || null;
+}
+
+function parseRecallTokens(text) {
+  return text
+    .split(/[,、\s]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function sectionTone(section) {
+  if (section.includes("ラテン")) return "latin";
+  if (section.includes("ボールルーム")) return "ballroom";
+  if (section === "break") return "break";
+  if (section === "ceremony") return "ceremony";
+  if (section === "show") return "show";
+  return "neutral";
+}
+
+const TONE_STRIPE = {
+  latin: "#a8362b",
+  ballroom: "#2c4a73",
+  break: "#5a5a52",
+  ceremony: "#b8901f",
+  show: "#8a5fae",
+  neutral: "#7a7a72",
+};
+
+const STORAGE_KEY = "b_and_g_progress_only_test_v1";
+const STAFF_PIN = "2929"; // 運営モードの合言葉。必要に応じて変更してください
+
+export default function CompetitionTracker() {
+  const [expandedRows, setExpandedRows] = useState(() => new Set());
+  const [mode, setMode] = useState("viewer"); // 'staff' | 'viewer'
+  const [unlocked, setUnlocked] = useState(false);
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pinValue, setPinValue] = useState("");
+  const [pinError, setPinError] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [recalls, setRecalls] = useState({}); // { [no]: "12, 15, 22, 30" }
+  const [recallDraft, setRecallDraft] = useState("");
+  const [recallSaved, setRecallSaved] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const listRef = useRef(null);
+  const pollRef = useRef(null);
+
+  // ?mode=viewer で開いた場合は運営への切り替えボタン自体を表示しない
+  const [viewerOnlyLink] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("mode") === "viewer";
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const requestStaffMode = () => {
+    if (unlocked) {
+      setMode("staff");
+      return;
+    }
+    setPinValue("");
+    setPinError(false);
+    setShowPinPrompt(true);
+  };
+
+  const submitPin = () => {
+    if (pinValue === STAFF_PIN) {
+      setUnlocked(true);
+      setShowPinPrompt(false);
+      setMode("staff");
+    } else {
+      setPinError(true);
+    }
+  };
+
+  const lockStaffMode = () => {
+    setUnlocked(false);
+    setMode("viewer");
+  };
+
+  const applyRemote = useCallback((idx, ts, recallMap) => {
+    setCurrentIdx((prev) => (idx !== prev ? idx : prev));
+    setUpdatedAt(ts);
+    if (recallMap) setRecalls(recallMap);
+  }, []);
+
+  const fetchState = useCallback(async () => {
+    try {
+      const res = await window.storage.get(STORAGE_KEY, true);
+      if (res && res.value) {
+        const parsed = JSON.parse(res.value);
+        applyRemote(parsed.currentIdx ?? 0, parsed.updatedAt ?? null, parsed.recalls ?? {});
+      }
+    } catch (e) {
+      // key not created yet — that's fine, stay at default
+    } finally {
+      setLoaded(true);
+    }
+  }, [applyRemote]);
+
+  useEffect(() => {
+    fetchState();
+    pollRef.current = setInterval(fetchState, 4000);
+    return () => clearInterval(pollRef.current);
+  }, [fetchState]);
+
+  const pushState = async (idx, recallMap = recalls) => {
+    const ts = new Date().toISOString();
+    setCurrentIdx(idx);
+    setUpdatedAt(ts);
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify({ currentIdx: idx, updatedAt: ts, recalls: recallMap }), true);
+    } catch (e) {
+      console.error("保存に失敗しました", e);
+    }
+  };
+
+  const saveRecall = async () => {
+    const noKey = String(ITEMS[currentIdx].no);
+    const nextRecalls = { ...recalls, [noKey]: recallDraft.trim() };
+    setRecalls(nextRecalls);
+    setRecallSaved(true);
+    setExpandedRows((prev) => new Set(prev).add(ITEMS[currentIdx].no));
+    setTimeout(() => setRecallSaved(false), 1500);
+    await pushState(currentIdx, nextRecalls);
+  };
+
+  const toggleRow = (no) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(no)) next.delete(no);
+      else next.add(no);
+      return next;
+    });
+  };
+
+  const goNext = () => currentIdx < ITEMS.length - 1 && pushState(currentIdx + 1);
+  const goPrev = () => currentIdx > 0 && pushState(currentIdx - 1);
+  const resetAll = () => pushState(0);
+
+  useEffect(() => {
+    const noKey = String(ITEMS[currentIdx].no);
+    setRecallDraft(recalls[noKey] ?? "");
+  }, [currentIdx, recalls]);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+    const el = listRef.current.querySelector(`[data-row="${currentIdx}"]`);
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [currentIdx, loaded]);
+
+  const current = ITEMS[currentIdx];
+  const next = ITEMS[currentIdx + 1];
+  const currentRecall = recalls[String(current.no)];
+  const progressPct = Math.round(((currentIdx + 1) / ITEMS.length) * 100);
+
+  return (
+    <div style={styles.page}>
+      <style>{`
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #3a4256; border-radius: 4px; }
+        .row-btn:active { transform: scale(0.98); }
+        input:focus-visible { box-shadow: 0 0 0 2px #c9a227; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+      `}</style>
+
+      {/* Header */}
+      <header style={styles.header}>
+        <div style={styles.headerTop}>
+          <div>
+            <div style={styles.eyebrow}>PROGRESS BOARD · 運営⇄観覧 同期テスト版</div>
+            <h1 style={styles.title}>2026 前期中部日本ダンス選手権</h1>
+            <div style={styles.subtitle}>併催：2026 中部ダンスフェスティバル in 名古屋</div>
+          </div>
+          <div style={styles.modeToggle}>
+            {viewerOnlyLink ? (
+              <span style={styles.viewerOnlyTag}><Eye size={14} style={{ marginRight: 6 }} /> 観覧用</span>
+            ) : (
+              <>
+                <button
+                  onClick={() => setMode("viewer")}
+                  style={{ ...styles.modeBtn, ...(mode === "viewer" ? styles.modeBtnActive : {}) }}
+                >
+                  <Eye size={14} style={{ marginRight: 6 }} /> 観覧
+                </button>
+                <button
+                  onClick={mode === "staff" ? lockStaffMode : requestStaffMode}
+                  style={{ ...styles.modeBtn, ...(mode === "staff" ? styles.modeBtnActive : {}) }}
+                >
+                  <Radio size={14} style={{ marginRight: 6 }} /> 運営{mode === "staff" ? "中" : ""}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {showPinPrompt && (
+          <div style={styles.pinOverlay}>
+            <div style={styles.pinCard}>
+              <div style={styles.pinTitle}>運営モードの合言葉</div>
+              <input
+                type="password"
+                inputMode="numeric"
+                autoFocus
+                value={pinValue}
+                onChange={(e) => {
+                  setPinValue(e.target.value);
+                  setPinError(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && submitPin()}
+                style={styles.pinInput}
+                placeholder="••••"
+              />
+              {pinError && <div style={styles.pinErrorText}>合言葉が違います</div>}
+              <div style={styles.pinBtnRow}>
+                <button onClick={() => setShowPinPrompt(false)} style={{ ...styles.ctrlBtn, ...styles.ctrlGhost }}>
+                  キャンセル
+                </button>
+                <button onClick={submitPin} style={{ ...styles.ctrlBtn, ...styles.ctrlPrimary }}>
+                  入る
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={styles.progressTrack}>
+          <div style={{ ...styles.progressFill, width: `${progressPct}%` }} />
+        </div>
+        <div style={styles.progressLabel}>
+          NO.{current.no} / {ITEMS.length}　{progressPct}%
+        </div>
+      </header>
+
+      <>
+      {/* Now card */}
+      <section style={{ ...styles.nowCard, borderLeftColor: TONE_STRIPE[sectionTone(current.section)] }}>
+        <div style={styles.nowLabel}>NOW</div>
+        {isSpecial(current.section) ? (
+          <div style={styles.nowSpecialTitle}>{current.cls}</div>
+        ) : (
+          <>
+            <div style={styles.nowMainRow}>
+              <span style={styles.nowSection}>{current.section}</span>
+              <span style={styles.nowClass}>{current.cls}</span>
+            </div>
+            <div style={styles.nowEventRow}>
+              <span style={styles.nowEvent}>{current.event}</span>
+              <span style={styles.nowRound}>{current.round}</span>
+            </div>
+            <div style={styles.nowMeta}>
+              <span style={styles.metaChip}><Clock size={13} /> {current.time}</span>
+              {current.heat > 0 && <span style={styles.metaChip}>ヒート {current.heat}</span>}
+              {current.pairs > 0 && <span style={styles.metaChip}><Users size={13} /> {current.pairs}組</span>}
+              {current.judge && <span style={styles.metaChip}><Gavel size={13} /> 主任 {current.judge}</span>}
+            </div>
+          </>
+        )}
+        {currentRecall ? (
+          <div style={styles.recallBanner}>
+            <div style={styles.recallLabel}>勝ち上がり</div>
+            <div style={styles.recallNumbers}>{currentRecall}</div>
+          </div>
+        ) : (
+          current.up != null && current.up > 0 && (
+            <div style={styles.upBanner}>勝ち上がり {current.up}組(背番号未入力)</div>
+          )
+        )}
+      </section>
+
+      {/* Next up strip */}
+      {next && (
+        <div style={styles.nextStrip}>
+          <span style={styles.nextLabel}>NEXT</span>
+          <span style={styles.nextText}>
+            {next.time}　{isSpecial(next.section) ? next.cls : `${next.section} ${next.cls} ${next.event} ${next.round}`}
+          </span>
+        </div>
+      )}
+
+      {/* Staff controls */}
+      {mode === "staff" && (
+        <div style={styles.controls}>
+          <button onClick={goPrev} disabled={currentIdx === 0} style={styles.ctrlBtn}>
+            <ChevronLeft size={18} /> 戻す
+          </button>
+          <button onClick={resetAll} style={{ ...styles.ctrlBtn, ...styles.ctrlGhost }}>
+            <RotateCcw size={16} /> 最初へ
+          </button>
+          <button onClick={goNext} disabled={currentIdx === ITEMS.length - 1} style={{ ...styles.ctrlBtn, ...styles.ctrlPrimary }}>
+            進める <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+
+      {mode === "staff" && !isSpecial(current.section) && current.up != null && current.up > 0 && (
+        <div style={styles.recallEntry}>
+          <div style={styles.recallEntryLabel}>勝ち上がり背番号を入力(カンマ区切り)</div>
+          <div style={styles.recallEntryRow}>
+            <input
+              type="text"
+              value={recallDraft}
+              onChange={(e) => setRecallDraft(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveRecall()}
+              placeholder="例: 12, 15, 22, 30"
+              style={styles.recallInput}
+            />
+            <button onClick={saveRecall} style={{ ...styles.ctrlBtn, ...styles.ctrlPrimary, flex: "0 0 auto", padding: "10px 16px" }}>
+              {recallSaved ? "保存済" : "表示する"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Timetable */}
+      <div style={styles.listWrap} ref={listRef}>
+        {ITEMS.map((item, idx) => {
+          const state = idx < currentIdx ? "done" : idx === currentIdx ? "current" : "upcoming";
+          const tone = sectionTone(item.section);
+          const entries = entriesForItem(item);
+          const isExpanded = expandedRows.has(item.no);
+          return (
+            <div key={item.no}>
+              <div
+                data-row={idx}
+                className="row-btn"
+                onClick={() => mode === "staff" && pushState(idx)}
+                style={{
+                  ...styles.row,
+                  ...(state === "current" ? styles.rowCurrent : {}),
+                  opacity: state === "done" ? 0.45 : 1,
+                  cursor: mode === "staff" ? "pointer" : "default",
+                  borderLeft: `4px solid ${TONE_STRIPE[tone]}`,
+                }}
+              >
+                <div style={styles.rowNo}>{item.no}</div>
+                <div style={styles.rowTime}>{item.time}</div>
+                <div style={styles.rowBody}>
+                  {isSpecial(item.section) ? (
+                    <span style={styles.rowSpecial}>{item.cls}</span>
+                  ) : (
+                    <span>
+                      <strong>{item.section}</strong> {item.cls} {item.event} {item.round}
+                      {item.heat > 1 && ` (${item.heat}ヒート)`}
+                    </span>
+                  )}
+                  {recalls[String(item.no)] && (
+                    <div style={styles.rowRecall}>勝ち上がり: {recalls[String(item.no)]}</div>
+                  )}
+                </div>
+                <div style={styles.rowStatus}>
+                  {state === "current" && <span style={styles.badgeNow}>進行中</span>}
+                  {state === "done" && <span style={styles.badgeDone}>終了</span>}
+                  {entries && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRow(item.no);
+                      }}
+                      style={styles.expandBtn}
+                    >
+                      {isExpanded ? "背番号 ▲" : "背番号 ▼"}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {isExpanded && entries && (
+                <div style={styles.bibChipRow}>
+                  {(() => {
+                    const advanced = new Set(parseRecallTokens(recalls[String(item.no)] || ""));
+                    return entries.map((e) => (
+                      <span key={e.bib} style={advanced.has(e.bib) ? styles.bibChipAdvanced : styles.bibChip}>
+                        {e.bib}
+                      </span>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      </>
+
+      <footer style={styles.footer}>
+        {updatedAt ? `最終更新 ${new Date(updatedAt).toLocaleTimeString("ja-JP")}` : "同期待機中"}　
+        {mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
+      </footer>
+    </div>
+  );
+}
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#171b26",
+    color: "#eae6da",
+    fontFamily: "'Hiragino Sans', 'Yu Gothic', system-ui, -apple-system, sans-serif",
+    paddingBottom: 24,
+  },
+  header: {
+    padding: "20px 18px 14px",
+    background: "linear-gradient(180deg, #1d2333 0%, #171b26 100%)",
+    borderBottom: "1px solid #2a3145",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+  },
+  headerTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: "0.14em",
+    color: "#c9a227",
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+  title: { fontSize: 19, fontWeight: 700, margin: 0, color: "#f4f1ea" },
+  subtitle: { fontSize: 12, color: "#8b93a8", marginTop: 3 },
+  modeToggle: { display: "flex", gap: 6, background: "#11141d", padding: 4, borderRadius: 10 },
+  modeBtn: {
+    display: "flex",
+    alignItems: "center",
+    border: "none",
+    background: "transparent",
+    color: "#8b93a8",
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "7px 10px",
+    borderRadius: 7,
+    cursor: "pointer",
+  },
+  modeBtnActive: { background: "#2c4a73", color: "#fff" },
+  viewerOnlyTag: {
+    display: "flex",
+    alignItems: "center",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#8b93a8",
+    padding: "7px 10px",
+  },
+  progressTrack: { marginTop: 14, height: 6, background: "#262c3d", borderRadius: 3, overflow: "hidden" },
+  progressFill: { height: "100%", background: "linear-gradient(90deg, #c9a227, #e0bb4a)", transition: "width 0.4s ease" },
+  progressLabel: { marginTop: 6, fontSize: 11, color: "#8b93a8", letterSpacing: "0.04em" },
+
+  tabBar: { display: "flex", gap: 6, marginTop: 14 },
+  tabBtn: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #2a3145",
+    background: "transparent",
+    color: "#8b93a8",
+    fontSize: 12,
+    fontWeight: 700,
+    padding: "8px 10px",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+  tabBtnActive: { background: "#242b3d", color: "#f4f1ea", borderColor: "#3a4256" },
+
+  searchPanel: { margin: "16px 16px 0" },
+  searchNotice: { fontSize: 11, color: "#8b93a8", background: "#1a2030", padding: "8px 12px", borderRadius: 8, marginBottom: 12, lineHeight: 1.5 },
+  searchInputRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    background: "#1f2537",
+    border: "1px solid #2a3145",
+    borderRadius: 10,
+    padding: "10px 12px",
+  },
+  searchInput: { flex: 1, border: "none", background: "transparent", color: "#f4f1ea", fontSize: 16, outline: "none" },
+  searchResults: { marginTop: 14 },
+  searchPersonBlock: { marginBottom: 18 },
+  searchResultHeader: { fontSize: 12, color: "#8b93a8", marginBottom: 8, fontWeight: 700 },
+  searchEmpty: { fontSize: 13, color: "#8b93a8", padding: "16px 4px" },
+  searchResultRow: {
+    display: "flex",
+    gap: 12,
+    padding: "10px 12px",
+    background: "#1a2030",
+    borderRadius: 10,
+    marginBottom: 8,
+    alignItems: "baseline",
+  },
+  searchResultTime: { fontSize: 12, color: "#e0bb4a", fontWeight: 700, flexShrink: 0, width: 44 },
+  searchResultBody: { fontSize: 13, color: "#dfe3ec" },
+
+  nowCard: {
+    margin: "16px 16px 0",
+    background: "#1f2537",
+    borderRadius: 14,
+    borderLeft: "6px solid",
+    padding: "16px 18px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+  },
+  nowLabel: { fontSize: 10, letterSpacing: "0.2em", color: "#c9a227", fontWeight: 800, marginBottom: 8 },
+  nowSpecialTitle: { fontSize: 18, fontWeight: 700, color: "#f4f1ea", lineHeight: 1.4 },
+  nowMainRow: { display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" },
+  nowSection: { fontSize: 15, fontWeight: 700, color: "#f4f1ea" },
+  nowClass: { fontSize: 14, color: "#c9cfdd" },
+  nowEventRow: { marginTop: 4, display: "flex", alignItems: "baseline", gap: 10 },
+  nowEvent: { fontSize: 26, fontWeight: 800, letterSpacing: "0.02em", color: "#f4f1ea" },
+  nowRound: { fontSize: 14, color: "#e0bb4a", fontWeight: 700 },
+  nowMeta: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 },
+  metaChip: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    fontSize: 12,
+    background: "#171b26",
+    color: "#b7bdcc",
+    padding: "5px 10px",
+    borderRadius: 20,
+  },
+  upBanner: {
+    marginTop: 12,
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#171b26",
+    background: "#e0bb4a",
+    display: "inline-block",
+    padding: "4px 10px",
+    borderRadius: 20,
+  },
+  recallBanner: {
+    marginTop: 12,
+    background: "#e0bb4a",
+    borderRadius: 10,
+    padding: "8px 12px",
+  },
+  recallLabel: { fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#5c4a0e" },
+  recallNumbers: { fontSize: 16, fontWeight: 800, color: "#171b26", marginTop: 2, letterSpacing: "0.02em" },
+
+  nextStrip: {
+    margin: "10px 16px 0",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 12,
+    color: "#8b93a8",
+    padding: "8px 14px",
+    background: "#1a2030",
+    borderRadius: 10,
+  },
+  nextLabel: { fontWeight: 800, color: "#5a6e94", letterSpacing: "0.1em", fontSize: 10 },
+  nextText: { color: "#c9cfdd" },
+
+  controls: { display: "flex", gap: 8, margin: "14px 16px 0" },
+  ctrlBtn: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    border: "1px solid #2a3145",
+    background: "#1f2537",
+    color: "#eae6da",
+    fontSize: 14,
+    fontWeight: 700,
+    padding: "12px 10px",
+    borderRadius: 10,
+    cursor: "pointer",
+  },
+  ctrlPrimary: { background: "#c9a227", color: "#171b26", border: "none" },
+  ctrlGhost: { flex: "0 0 auto", padding: "12px 14px", color: "#8b93a8" },
+
+  recallEntry: { margin: "10px 16px 0", background: "#1f2537", border: "1px solid #2a3145", borderRadius: 10, padding: "10px 12px" },
+  recallEntryLabel: { fontSize: 11, color: "#8b93a8", marginBottom: 6 },
+  recallEntryRow: { display: "flex", gap: 8 },
+  recallInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: "10px 10px",
+    borderRadius: 8,
+    border: "1px solid #2a3145",
+    background: "#171b26",
+    color: "#f4f1ea",
+    outline: "none",
+  },
+
+  listWrap: { margin: "16px 12px 0", maxHeight: "48vh", overflowY: "auto", borderRadius: 12, background: "#1a2030" },
+  row: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 12px",
+    borderBottom: "1px solid #232a3c",
+    fontSize: 13,
+  },
+  rowCurrent: { background: "#26314a" },
+  rowNo: { width: 22, fontSize: 11, color: "#5a6e94", fontWeight: 700, flexShrink: 0 },
+  rowTime: { width: 44, fontSize: 12, color: "#8b93a8", flexShrink: 0 },
+  rowBody: { flex: 1, color: "#dfe3ec", lineHeight: 1.35 },
+  rowSpecial: { color: "#b7bdcc", fontStyle: "italic" },
+  rowRecall: { fontSize: 11, color: "#e0bb4a", marginTop: 2 },
+  rowStatus: { flexShrink: 0 },
+  badgeNow: { fontSize: 10, fontWeight: 800, background: "#e0bb4a", color: "#171b26", padding: "3px 8px", borderRadius: 12 },
+  badgeDone: { fontSize: 10, color: "#5a6e94" },
+  expandBtn: {
+    display: "block",
+    marginTop: 4,
+    fontSize: 10,
+    color: "#5a6e94",
+    background: "transparent",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+  },
+  bibChipRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 6,
+    padding: "8px 12px 12px 46px",
+    background: "#171b26",
+    borderBottom: "1px solid #232a3c",
+  },
+  bibChip: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#c9cfdd",
+    background: "#242b3d",
+    padding: "3px 9px",
+    borderRadius: 12,
+  },
+  bibChipAdvanced: {
+    fontSize: 11,
+    fontWeight: 800,
+    color: "#171b26",
+    background: "#e0bb4a",
+    padding: "3px 9px",
+    borderRadius: 12,
+  },
+  recallPreview: { marginTop: 8, fontSize: 12, color: "#e0bb4a", lineHeight: 1.5 },
+
+  rosterGroup: { marginBottom: 16 },
+  rosterGroupHeader: { fontSize: 12, color: "#8b93a8", marginBottom: 6, lineHeight: 1.4 },
+  rosterEntryRow: { display: "flex", gap: 10, alignItems: "baseline", padding: "6px 12px", background: "#1a2030", borderRadius: 8, marginBottom: 4 },
+  rosterBib: { fontSize: 12, fontWeight: 800, color: "#e0bb4a", width: 30, flexShrink: 0 },
+  rosterName: { fontSize: 13, color: "#dfe3ec" },
+
+  footer: { textAlign: "center", fontSize: 11, color: "#5a6e94", marginTop: 14 },
+
+  pinOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(10,12,18,0.72)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+    padding: 20,
+  },
+  pinCard: {
+    width: "100%",
+    maxWidth: 280,
+    background: "#1f2537",
+    border: "1px solid #2a3145",
+    borderRadius: 14,
+    padding: 20,
+    boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+  },
+  pinTitle: { fontSize: 13, fontWeight: 700, color: "#c9cfdd", marginBottom: 10 },
+  pinInput: {
+    width: "100%",
+    fontSize: 20,
+    letterSpacing: "0.3em",
+    textAlign: "center",
+    padding: "10px 8px",
+    borderRadius: 8,
+    border: "1px solid #2a3145",
+    background: "#171b26",
+    color: "#f4f1ea",
+    outline: "none",
+  },
+  pinErrorText: { fontSize: 11, color: "#d9694f", marginTop: 6 },
+  pinBtnRow: { display: "flex", gap: 8, marginTop: 14 },
+};
