@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Users, Gavel, Clock, RotateCcw, Radio, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Gavel, Clock, RotateCcw, Radio, Eye, Search } from "lucide-react";
 
 // ---- Sample data, transcribed from the 2026 JDC Chubu one-day competition schedule ----
 const RAW = [
@@ -194,7 +194,7 @@ function buildParticipantIndex() {
 
   return { index, registry, roster, groupEntries };
 }
-const { groupEntries: GROUP_ENTRIES } = buildParticipantIndex();
+const { index: PARTICIPANT_INDEX, registry: PARTICIPANT_REGISTRY, roster: PARTICIPANT_ROSTER, groupEntries: GROUP_ENTRIES } = buildParticipantIndex();
 
 function entriesForItem(item) {
   if (isSpecial(item.section)) return null;
@@ -226,10 +226,11 @@ const TONE_STRIPE = {
   neutral: "#7a7a72",
 };
 
-const STORAGE_KEY = "b_and_g_progress_only_test_v1";
+const STORAGE_KEY = "b_and_g_progress_v1";
 const STAFF_PIN = "2929"; // 運営モードの合言葉。必要に応じて変更してください
 
 export default function CompetitionTracker() {
+  const [view, setView] = useState("progress"); // 'progress' | 'search' | 'roster'
   const [expandedRows, setExpandedRows] = useState(() => new Set());
   const [mode, setMode] = useState("viewer"); // 'staff' | 'viewer'
   const [unlocked, setUnlocked] = useState(false);
@@ -242,6 +243,7 @@ export default function CompetitionTracker() {
   const [recallDraft, setRecallDraft] = useState("");
   const [recallSaved, setRecallSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [bibQuery, setBibQuery] = useState("");
   const listRef = useRef(null);
   const pollRef = useRef(null);
 
@@ -370,7 +372,7 @@ export default function CompetitionTracker() {
       <header style={styles.header}>
         <div style={styles.headerTop}>
           <div>
-            <div style={styles.eyebrow}>PROGRESS BOARD · 運営⇄観覧 同期テスト版</div>
+            <div style={styles.eyebrow}>PROGRESS BOARD · テスト運用</div>
             <h1 style={styles.title}>2026 前期中部日本ダンス選手権</h1>
             <div style={styles.subtitle}>併催：2026 中部ダンスフェスティバル in 名古屋</div>
           </div>
@@ -394,6 +396,27 @@ export default function CompetitionTracker() {
               </>
             )}
           </div>
+        </div>
+
+        <div style={styles.tabBar}>
+          <button
+            onClick={() => setView("progress")}
+            style={{ ...styles.tabBtn, ...(view === "progress" ? styles.tabBtnActive : {}) }}
+          >
+            進行状況
+          </button>
+          <button
+            onClick={() => setView("search")}
+            style={{ ...styles.tabBtn, ...(view === "search" ? styles.tabBtnActive : {}) }}
+          >
+            <Search size={13} style={{ marginRight: 5 }} /> 出場種目検索
+          </button>
+          <button
+            onClick={() => setView("roster")}
+            style={{ ...styles.tabBtn, ...(view === "roster" ? styles.tabBtnActive : {}) }}
+          >
+            <Users size={13} style={{ marginRight: 5 }} /> 出場者一覧
+          </button>
         </div>
 
         {showPinPrompt && (
@@ -426,15 +449,20 @@ export default function CompetitionTracker() {
           </div>
         )}
 
-        <div style={styles.progressTrack}>
-          <div style={{ ...styles.progressFill, width: `${progressPct}%` }} />
-        </div>
-        <div style={styles.progressLabel}>
-          NO.{current.no} / {ITEMS.length}　{progressPct}%
-        </div>
+        {view === "progress" && (
+          <>
+            <div style={styles.progressTrack}>
+              <div style={{ ...styles.progressFill, width: `${progressPct}%` }} />
+            </div>
+            <div style={styles.progressLabel}>
+              NO.{current.no} / {ITEMS.length}　{progressPct}%
+            </div>
+          </>
+        )}
       </header>
 
-      <>
+      {view === "progress" ? (
+        <>
       {/* Now card */}
       <section style={{ ...styles.nowCard, borderLeftColor: TONE_STRIPE[sectionTone(current.section)] }}>
         <div style={styles.nowLabel}>NOW</div>
@@ -582,11 +610,93 @@ export default function CompetitionTracker() {
           );
         })}
       </div>
-      </>
+        </>
+      ) : view === "search" ? (
+        <section style={styles.searchPanel}>
+          <div style={styles.searchNotice}>
+            ※ 選手名・出場種目は実際のエントリーデータです。背番号は公式には未確定のため、テスト用に仮番号を振っています。背番号か氏名の一部で検索できます。
+          </div>
+          <div style={styles.searchInputRow}>
+            <Search size={16} style={{ color: "#8b93a8" }} />
+            <input
+              type="text"
+              value={bibQuery}
+              onChange={(e) => setBibQuery(e.target.value.trim())}
+              placeholder="背番号 または 氏名の一部"
+              style={styles.searchInput}
+            />
+          </div>
+
+          {bibQuery && (() => {
+            const isNumeric = /^\d+$/.test(bibQuery);
+            let matchedBibs = [];
+            if (isNumeric) {
+              matchedBibs = PARTICIPANT_INDEX[bibQuery] ? [bibQuery] : [];
+            } else {
+              matchedBibs = Array.from(PARTICIPANT_REGISTRY.entries())
+                .filter(([name]) => name.includes(bibQuery))
+                .map(([, bib]) => bib);
+            }
+            return (
+              <div style={styles.searchResults}>
+                {matchedBibs.length === 0 ? (
+                  <div style={styles.searchEmpty}>「{bibQuery}」に一致する出場者が見つかりません</div>
+                ) : (
+                  matchedBibs.map((bib) => (
+                    <div key={bib} style={styles.searchPersonBlock}>
+                      <div style={styles.searchResultHeader}>
+                        背番号(仮) {bib} — {PARTICIPANT_INDEX[bib][0].name}
+                      </div>
+                      {PARTICIPANT_INDEX[bib]
+                        .slice()
+                        .sort((a, b) => a.no - b.no)
+                        .map((r, i) => (
+                          <div key={i} style={styles.searchResultRow}>
+                            <div style={styles.searchResultTime}>{r.time}</div>
+                            <div style={styles.searchResultBody}>
+                              <strong>{r.section}</strong> {r.cls} {r.event}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ))
+                )}
+              </div>
+            );
+          })()}
+        </section>
+      ) : (
+        <section style={styles.searchPanel}>
+          <div style={styles.searchNotice}>
+            ※ 出場者一覧(背番号は仮番号)。競技順に並んでいます。
+          </div>
+          {PARTICIPANT_ROSTER.map((g, gi) => (
+            <div key={gi} style={styles.rosterGroup}>
+              <div style={styles.rosterGroupHeader}>
+                {g.time}　<strong>{g.section}</strong> {g.cls} {g.event}({g.entries.length}組)
+              </div>
+              {g.entries.map((e, ei) => (
+                <div key={ei} style={styles.rosterEntryRow}>
+                  <span style={styles.rosterBib}>{e.bib}</span>
+                  <span style={styles.rosterName}>{e.name}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </section>
+      )}
 
       <footer style={styles.footer}>
-        {updatedAt ? `最終更新 ${new Date(updatedAt).toLocaleTimeString("ja-JP")}` : "同期待機中"}　
-        {mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
+        {view === "progress" ? (
+          <>
+            {updatedAt ? `最終更新 ${new Date(updatedAt).toLocaleTimeString("ja-JP")}` : "同期待機中"}　
+            {mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
+          </>
+        ) : view === "search" ? (
+          "· 出場種目検索（仮データ）"
+        ) : (
+          "· 出場者一覧（背番号は仮）"
+        )}
       </footer>
     </div>
   );
