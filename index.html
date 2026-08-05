@@ -1,7 +1,150 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Users, Gavel, Clock, RotateCcw, Radio, Eye, Search } from "lucide-react";
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2026 前期中部日本ダンス選手権 - 進行状況</title>
+<style>
+  :root {
+    --bg: #171b26;
+    --panel: #1f2537;
+    --panel2: #1a2030;
+    --border: #2a3145;
+    --text: #eae6da;
+    --text-dim: #8b93a8;
+    --text-dim2: #5a6e94;
+    --gold: #c9a227;
+    --gold2: #e0bb4a;
+    --ballroom: #2c4a73;
+    --latin: #a8362b;
+    --red: #d9694f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Hiragino Sans', 'Yu Gothic', system-ui, -apple-system, sans-serif;
+    padding-bottom: 24px;
+  }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #3a4256; border-radius: 4px; }
+  input:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
 
-// ---- Sample data, transcribed from the 2026 JDC Chubu one-day competition schedule ----
+  header {
+    padding: 20px 18px 14px;
+    background: linear-gradient(180deg, #1d2333 0%, #171b26 100%);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .eyebrow { font-size: 11px; letter-spacing: .14em; color: var(--gold); font-weight: 700; margin-bottom: 4px; }
+  h1 { font-size: 19px; font-weight: 700; margin: 0; color: #f4f1ea; }
+  .subtitle { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+
+  .mode-toggle { display: flex; gap: 6px; background: #11141d; padding: 4px; border-radius: 10px; }
+  .mode-btn {
+    display: flex; align-items: center; border: none; background: transparent;
+    color: var(--text-dim); font-size: 12px; font-weight: 600; padding: 7px 10px;
+    border-radius: 7px; cursor: pointer;
+  }
+  .mode-btn.active { background: var(--ballroom); color: #fff; }
+  .viewer-only-tag { display: flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--text-dim); padding: 7px 10px; }
+
+  .setup-notice {
+    margin-top: 12px; font-size: 11px; line-height: 1.6; color: #f4d58d;
+    background: #3a2f14; border: 1px solid #6b5420; border-radius: 8px; padding: 8px 10px;
+  }
+
+  .progress-track { margin-top: 14px; height: 6px; background: #262c3d; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); transition: width .4s ease; }
+  .progress-label { margin-top: 6px; font-size: 11px; color: var(--text-dim); letter-spacing: .04em; }
+
+  .now-card {
+    margin: 16px 16px 0; background: var(--panel); border-radius: 14px; border-left: 6px solid;
+    padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .now-label { font-size: 10px; letter-spacing: .2em; color: var(--gold); font-weight: 800; margin-bottom: 8px; }
+  .now-special { font-size: 18px; font-weight: 700; color: #f4f1ea; line-height: 1.4; }
+  .now-main-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .now-section { font-size: 15px; font-weight: 700; color: #f4f1ea; }
+  .now-class { font-size: 14px; color: #c9cfdd; }
+  .now-event-row { margin-top: 4px; display: flex; align-items: baseline; gap: 10px; }
+  .now-event { font-size: 26px; font-weight: 800; letter-spacing: .02em; color: #f4f1ea; }
+  .now-round { font-size: 14px; color: var(--gold2); font-weight: 700; }
+  .now-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .meta-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; background: var(--bg); color: #b7bdcc; padding: 5px 10px; border-radius: 20px; }
+  .up-banner { margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--bg); background: var(--gold2); display: inline-block; padding: 4px 10px; border-radius: 20px; }
+  .recall-banner { margin-top: 12px; background: var(--gold2); border-radius: 10px; padding: 8px 12px; }
+  .recall-label { font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #5c4a0e; }
+  .recall-numbers { font-size: 16px; font-weight: 800; color: var(--bg); margin-top: 2px; letter-spacing: .02em; }
+
+  .next-strip { margin: 10px 16px 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); padding: 8px 14px; background: var(--panel2); border-radius: 10px; }
+  .next-label { font-weight: 800; color: var(--text-dim2); letter-spacing: .1em; font-size: 10px; }
+  .next-text { color: #c9cfdd; }
+
+  .controls { display: flex; gap: 8px; margin: 14px 16px 0; }
+  .ctrl-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    font-size: 14px; font-weight: 700; padding: 12px 10px; border-radius: 10px; cursor: pointer;
+  }
+  .ctrl-btn:disabled { opacity: .4; cursor: default; }
+  .ctrl-primary { background: var(--gold); color: var(--bg); border: none; }
+  .ctrl-ghost { flex: 0 0 auto; padding: 12px 14px; color: var(--text-dim); }
+
+  .recall-entry { margin: 10px 16px 0; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .recall-entry-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+  .recall-entry-row { display: flex; gap: 8px; }
+  .recall-input {
+    flex: 1; font-size: 14px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: #f4f1ea; outline: none;
+  }
+
+  .list-wrap { margin: 16px 12px 0; max-height: 52vh; overflow-y: auto; border-radius: 12px; background: var(--panel2); }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #232a3c; font-size: 13px; cursor: default; }
+  .row.staff-clickable { cursor: pointer; }
+  .row.current { background: #26314a; }
+  .row.done { opacity: .45; }
+  .row-no { width: 22px; font-size: 11px; color: var(--text-dim2); font-weight: 700; flex-shrink: 0; }
+  .row-time { width: 44px; font-size: 12px; color: var(--text-dim); flex-shrink: 0; }
+  .row-body { flex: 1; color: #dfe3ec; line-height: 1.35; }
+  .row-special { color: #b7bdcc; font-style: italic; }
+  .row-recall { font-size: 11px; color: var(--gold2); margin-top: 2px; }
+  .row-status { flex-shrink: 0; text-align: right; }
+  .badge-now { font-size: 10px; font-weight: 800; background: var(--gold2); color: var(--bg); padding: 3px 8px; border-radius: 12px; }
+  .badge-done { font-size: 10px; color: var(--text-dim2); }
+  .expand-btn { display: block; margin-top: 4px; font-size: 10px; color: var(--text-dim2); background: transparent; border: none; padding: 0; cursor: pointer; }
+  .bib-chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 12px 46px; background: var(--bg); border-bottom: 1px solid #232a3c; }
+  .bib-chip { font-size: 11px; font-weight: 700; color: #c9cfdd; background: #242b3d; padding: 3px 9px; border-radius: 12px; }
+  .bib-chip.advanced { color: var(--bg); background: var(--gold2); font-weight: 800; }
+
+  footer { text-align: center; font-size: 11px; color: var(--text-dim2); margin-top: 14px; }
+  footer .err { color: var(--red); font-weight: 700; }
+
+  .pin-overlay { position: fixed; inset: 0; background: rgba(10,12,18,.72); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .pin-card { width: 100%; max-width: 280px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 12px 32px rgba(0,0,0,.4); }
+  .pin-title { font-size: 13px; font-weight: 700; color: #c9cfdd; margin-bottom: 10px; }
+  .pin-input { width: 100%; font-size: 20px; letter-spacing: .3em; text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: #f4f1ea; outline: none; }
+  .pin-error { font-size: 11px; color: var(--red); margin-top: 6px; }
+  .pin-btn-row { display: flex; gap: 8px; margin-top: 14px; }
+
+  .icon { display: inline-block; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============ 設定 ============ */
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzUgVAbBgSZRV8bhF2IRk_Sqa1wPZIGbCqOloKwq0Kte5CHilPRnHIP25VdoL_Xn3geUA/exec";
+const STAFF_PIN = "2929"; // 運営モードの合言葉。必要に応じて変更してください
+const POLL_MS = 4000;
+
+/* ============ データ(スケジュール) ============ */
 const RAW = [
   [1, "10:30", "アマ・ボールルーム", "B級", "WT", "1次予選", 3, 30, 24, "D", "0:12:00"],
   [2, "10:42", "アマ・ボールルーム", "C級", "W", "1次予選", 2, 16, 12, "C", "0:04:30"],
@@ -66,148 +209,118 @@ const RAW = [
   [61, "17:15", "ceremony", "オナーダンス・選手権表彰式", "", "", 0, 0, null, "", "0:25:00"],
   [62, "17:40", "ceremony", "閉会", "", "", 0, 0, null, "", "0:00:00"],
 ];
+const FIELDS = ["no","time","section","cls","event","round","heat","pairs","up","judge","duration"];
+const ITEMS = RAW.map(row => Object.fromEntries(FIELDS.map((f,i) => [f, row[i]])));
+const isSpecial = section => ["break","ceremony","show"].includes(section);
 
-const FIELDS = ["no", "time", "section", "cls", "event", "round", "heat", "pairs", "up", "judge", "duration"];
-const ITEMS = RAW.map((row) => Object.fromEntries(FIELDS.map((f, i) => [f, row[i]])));
-
-const isSpecial = (section) => ["break", "ceremony", "show"].includes(section);
-
-// ---- Real entry list, transcribed from the uploaded クラス別出場選手一覧表 ----
-// Bib numbers are not officially assigned yet, so a test number is generated per unique
-// couple/individual here (in order of first appearance) purely so the search UI can be tried.
+/* ============ データ(エントリー一覧) ============ */
 const ENTRY_GROUPS = [
   { section: "アマ・ボールルーム", cls: "B級", event: "WT", pairs: [
-    ["有賀 義隆", "国枝 敬子"], ["安藤 勉", "新海 典江"], ["安藤 安夫", "上野 清美"], ["石原 逸郎", "石原 恵美子"],
-    ["宇野 幸男", "本田 久仁子"], ["岡田 洋", "岡田 みどり"], ["小川 遥叶", "村瀬 稚奈"], ["尾﨑 直也", "林 仁美"],
-    ["加藤 紀彦", "太田 玲子"], ["國田 慎弥", "櫻井 玲奈"], ["黒田 敦也", "河合 琴香"], ["近藤 貞司", "近藤 知子"],
-    ["柴垣 宏行", "福瀧 愛子"], ["杉山 久八", "北澤 由美子"], ["鈴木 啓太", "田中 清羽"], ["関 守", "岡谷 恵美子"],
-    ["髙橋 錦司", "田原 美緒"], ["塚田 淑慈", "徳永 真唯"], ["丹野 吉道", "丹野 いづみ"], ["服部 清", "米津 由里"],
-    ["原田 則夫", "原田 真由美"], ["細井 良彦", "細井 和子"], ["本田 優", "榊原 美加"], ["前原 勝明", "前原 真理子"],
-    ["松村 清孝", "鈴木 久美子"], ["峰 裕一", "横山 七奈子"], ["本倉 拓朗", "宮永 安珠"], ["森本 貴大", "島地 由利江"],
-    ["和佐田 結樹", "遠山 彩恵"],
+    ["有賀 義隆","国枝 敬子"],["安藤 勉","新海 典江"],["安藤 安夫","上野 清美"],["石原 逸郎","石原 恵美子"],
+    ["宇野 幸男","本田 久仁子"],["岡田 洋","岡田 みどり"],["小川 遥叶","村瀬 稚奈"],["尾﨑 直也","林 仁美"],
+    ["加藤 紀彦","太田 玲子"],["國田 慎弥","櫻井 玲奈"],["黒田 敦也","河合 琴香"],["近藤 貞司","近藤 知子"],
+    ["柴垣 宏行","福瀧 愛子"],["杉山 久八","北澤 由美子"],["鈴木 啓太","田中 清羽"],["関 守","岡谷 恵美子"],
+    ["髙橋 錦司","田原 美緒"],["塚田 淑慈","徳永 真唯"],["丹野 吉道","丹野 いづみ"],["服部 清","米津 由里"],
+    ["原田 則夫","原田 真由美"],["細井 良彦","細井 和子"],["本田 優","榊原 美加"],["前原 勝明","前原 真理子"],
+    ["松村 清孝","鈴木 久美子"],["峰 裕一","横山 七奈子"],["本倉 拓朗","宮永 安珠"],["森本 貴大","島地 由利江"],
+    ["和佐田 結樹","遠山 彩恵"],
   ]},
   { section: "アマ・ボールルーム", cls: "C級", event: "W", pairs: [
-    ["浅井 清史", "浅井 裕子"], ["伊藤 成輝", "櫻井 友子"], ["岩男 昭則", "庄屋 貴鳳"], ["岩崎 幸司", "村田 愛子"],
-    ["叶 龍人", "丹羽 緑"], ["近藤 由秋", "武生 和江"], ["佐野 寛", "那須 恵子"], ["鈴木 真澄", "山口 年枝"],
-    ["髙橋 錦司", "田原 美緒"], ["塚田 淑慈", "徳永 真唯"], ["中村 俊哉", "中村 真理子"], ["野々山 史男", "野々山 千世代"],
-    ["原田 則夫", "原田 真由美"], ["平野 文美", "村上 久美子"], ["峰 裕一", "横山 七奈子"], ["森本 貴大", "島地 由利江"],
+    ["浅井 清史","浅井 裕子"],["伊藤 成輝","櫻井 友子"],["岩男 昭則","庄屋 貴鳳"],["岩崎 幸司","村田 愛子"],
+    ["叶 龍人","丹羽 緑"],["近藤 由秋","武生 和江"],["佐野 寛","那須 恵子"],["鈴木 真澄","山口 年枝"],
+    ["髙橋 錦司","田原 美緒"],["塚田 淑慈","徳永 真唯"],["中村 俊哉","中村 真理子"],["野々山 史男","野々山 千世代"],
+    ["原田 則夫","原田 真由美"],["平野 文美","村上 久美子"],["峰 裕一","横山 七奈子"],["森本 貴大","島地 由利江"],
   ]},
   { section: "アマ・ボールルーム", cls: "オープン", event: "WTFQ", pairs: [
-    ["牛田 基彦", "牛田 紀世美"], ["小川 遥叶", "村瀬 稚奈"], ["奥薗 信人", "小池 理紗"], ["樫原 康太", "加藤 みなみ"],
-    ["加藤 大喜", "小森 菜々美"], ["加納 弘章", "井藤 あや"], ["髙橋 竜太", "平良 早耶花"], ["髙谷 智史", "北川 明歩"],
-    ["徳良 和之", "加納 羽華"], ["細江 耕平", "河岸 来実"], ["村上 和穂", "金子 真弓"], ["本倉 拓朗", "宮永 安珠"],
-    ["山川 太一", "蒲江 里奈"], ["山下 雄大", "小川 美玲"], ["山下 慶太郎", "池田 綾香"],
+    ["牛田 基彦","牛田 紀世美"],["小川 遥叶","村瀬 稚奈"],["奥薗 信人","小池 理紗"],["樫原 康太","加藤 みなみ"],
+    ["加藤 大喜","小森 菜々美"],["加納 弘章","井藤 あや"],["髙橋 竜太","平良 早耶花"],["髙谷 智史","北川 明歩"],
+    ["徳良 和之","加納 羽華"],["細江 耕平","河岸 来実"],["村上 和穂","金子 真弓"],["本倉 拓朗","宮永 安珠"],
+    ["山川 太一","蒲江 里奈"],["山下 雄大","小川 美玲"],["山下 慶太郎","池田 綾香"],
   ]},
   { section: "アマ・ボールルーム", cls: "D級", event: "F", pairs: [
-    ["浅井 英一", "戸成 佐代子"], ["池田 永", "池田 京子"], ["井戸 博", "井戸 好子"], ["伊藤 勇祐", "河北 直美"],
-    ["叶 龍人", "丹羽 緑"], ["近藤 由秋", "武生 和江"], ["佐野 寛", "那須 恵子"], ["柴田 年男", "横田 絹代"],
-    ["平田 富夫", "山本 宰子"],
+    ["浅井 英一","戸成 佐代子"],["池田 永","池田 京子"],["井戸 博","井戸 好子"],["伊藤 勇祐","河北 直美"],
+    ["叶 龍人","丹羽 緑"],["近藤 由秋","武生 和江"],["佐野 寛","那須 恵子"],["柴田 年男","横田 絹代"],
+    ["平田 富夫","山本 宰子"],
   ]},
   { section: "アマ・ボールルーム", cls: "D級", event: "T", pairs: [
-    ["浅井 英一", "戸成 佐代子"], ["池田 永", "池田 京子"], ["井戸 博", "井戸 好子"], ["伊藤 勇祐", "河北 直美"],
-    ["叶 龍人", "丹羽 緑"], ["近藤 由秋", "武生 和江"], ["佐野 寛", "那須 恵子"], ["柴田 年男", "横田 絹代"],
-    ["平田 富夫", "山本 宰子"],
+    ["浅井 英一","戸成 佐代子"],["池田 永","池田 京子"],["井戸 博","井戸 好子"],["伊藤 勇祐","河北 直美"],
+    ["叶 龍人","丹羽 緑"],["近藤 由秋","武生 和江"],["佐野 寛","那須 恵子"],["柴田 年男","横田 絹代"],
+    ["平田 富夫","山本 宰子"],
   ]},
   { section: "アマ・ボールルーム", cls: "C級", event: "Q", pairs: [
-    ["浅井 清史", "浅井 裕子"], ["伊藤 成輝", "櫻井 友子"], ["岩男 昭則", "庄屋 貴鳳"], ["佐野 寛", "那須 恵子"],
-    ["鈴木 真澄", "山口 年枝"], ["髙橋 錦司", "田原 美緒"], ["中村 俊哉", "中村 真理子"], ["野々山 史男", "野々山 千世代"],
-    ["峰 裕一", "横山 七奈子"], ["森 正吉", "尾高 妙子"], ["森本 貴大", "島地 由利江"],
+    ["浅井 清史","浅井 裕子"],["伊藤 成輝","櫻井 友子"],["岩男 昭則","庄屋 貴鳳"],["佐野 寛","那須 恵子"],
+    ["鈴木 真澄","山口 年枝"],["髙橋 錦司","田原 美緒"],["中村 俊哉","中村 真理子"],["野々山 史男","野々山 千世代"],
+    ["峰 裕一","横山 七奈子"],["森 正吉","尾高 妙子"],["森本 貴大","島地 由利江"],
   ]},
-  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "T", solo: ["奥薗 信人", "小池 理紗", "川路 賢次", "松川 稀"] },
-  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "W", solo: ["川路 賢次", "松川 稀"] },
-  { section: "プロ・ラテン", cls: "BCD級", event: "CP", pairs: [["小森 康裕", "滝川 和美"]] },
+  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "T", solo: ["奥薗 信人","小池 理紗","川路 賢次","松川 稀"] },
+  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "W", solo: ["川路 賢次","松川 稀"] },
+  { section: "プロ・ラテン", cls: "BCD級", event: "CP", pairs: [["小森 康裕","滝川 和美"]] },
   { section: "プロ・ラテン", cls: "オープン", event: "CSRP", pairs: [
-    ["岩本 憲幸", "稲垣 はる美"], ["勝川 佳和", "清水 佳奈子"], ["勝野 出", "浅海 愛"], ["金原 亮司", "永原 由貴"],
-    ["小森 康裕", "滝川 和美"], ["平柳 諒悟", "佐田 みづほ"], ["村上 知哉", "村田 佳澄"], ["山﨑 雅則", "河内 知子"],
+    ["岩本 憲幸","稲垣 はる美"],["勝川 佳和","清水 佳奈子"],["勝野 出","浅海 愛"],["金原 亮司","永原 由貴"],
+    ["小森 康裕","滝川 和美"],["平柳 諒悟","佐田 みづほ"],["村上 知哉","村田 佳澄"],["山﨑 雅則","河内 知子"],
   ]},
-  { section: "アマ・ラテン", cls: "ソロダンス", event: "C", solo: ["Nikita", "池田 綾香", "大石 彩世", "小栗 沙永子", "杉田 則子", "辰巳 則子", "日高 芽生"] },
-  { section: "アマ・ラテン", cls: "ソロダンス", event: "R", solo: ["Nikita", "池田 綾香", "大石 彩世", "小栗 沙永子", "杉田 則子", "辰巳 則子"] },
-  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "R", pairs: [["松野 日向子", "中村 瑠緋菜"]] },
-  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "C", pairs: [["松野 日向子", "中村 瑠緋菜"]] },
+  { section: "アマ・ラテン", cls: "ソロダンス", event: "C", solo: ["Nikita","池田 綾香","大石 彩世","小栗 沙永子","杉田 則子","辰巳 則子","日高 芽生"] },
+  { section: "アマ・ラテン", cls: "ソロダンス", event: "R", solo: ["Nikita","池田 綾香","大石 彩世","小栗 沙永子","杉田 則子","辰巳 則子"] },
+  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "R", pairs: [["松野 日向子","中村 瑠緋菜"]] },
+  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "C", pairs: [["松野 日向子","中村 瑠緋菜"]] },
   { section: "アマ・ラテン", cls: "C級", event: "C", pairs: [
-    ["髙橋 錦司", "田原 美緒"], ["野々山 史男", "野々山 千世代"], ["平野 文美", "村上 久美子"], ["峰 裕一", "横山 七奈子"],
-    ["吉田 茂", "酒井 美早子"],
+    ["髙橋 錦司","田原 美緒"],["野々山 史男","野々山 千世代"],["平野 文美","村上 久美子"],["峰 裕一","横山 七奈子"],
+    ["吉田 茂","酒井 美早子"],
   ]},
   { section: "アマ・ラテン", cls: "B級", event: "SP", pairs: [
-    ["岩男 昭則", "庄屋 貴鳳"], ["岩崎 幸司", "村田 愛子"], ["関 守", "岡谷 恵美子"], ["寺澤 光", "青木 聖奈"],
-    ["戸田 光志", "戸田 ひろ子"], ["原田 則夫", "原田 真由美"], ["森 正吉", "尾高 妙子"], ["山本 明", "山本 晴美"],
-    ["山本 立樹", "山本 夕貴"],
+    ["岩男 昭則","庄屋 貴鳳"],["岩崎 幸司","村田 愛子"],["関 守","岡谷 恵美子"],["寺澤 光","青木 聖奈"],
+    ["戸田 光志","戸田 ひろ子"],["原田 則夫","原田 真由美"],["森 正吉","尾高 妙子"],["山本 明","山本 晴美"],
+    ["山本 立樹","山本 夕貴"],
   ]},
   { section: "プロ・ボールルーム", cls: "CDN級", event: "WF", pairs: [
-    ["安藤 裕一", "河内 芳江"], ["伊藤 圭一", "廣瀬 久美"], ["村上 知哉", "村田 佳澄"],
+    ["安藤 裕一","河内 芳江"],["伊藤 圭一","廣瀬 久美"],["村上 知哉","村田 佳澄"],
   ]},
   { section: "シニア60・ボールルーム", cls: "選手権", event: "WTF", pairs: [
-    ["阿部 正三", "阿部 里美"], ["安藤 勉", "新海 典江"], ["安藤 安夫", "上野 清美"], ["石原 逸郎", "石原 恵美子"],
-    ["井上 雅幹", "井上 啓子"], ["岡田 浩之", "岡田 やす江"], ["尾﨑 直也", "林 仁美"], ["近藤 貞司", "近藤 知子"],
-    ["佐藤 寛", "小西 ゆり子"], ["早苗 哲也", "渡辺 郁子"], ["柴垣 宏行", "福瀧 愛子"], ["杉山 久八", "北澤 由美子"],
-    ["須藤 進", "小林 椿"], ["関 守", "岡谷 恵美子"], ["戸田 光志", "戸田 ひろ子"], ["服部 清", "米津 由里"],
-    ["早川 明彦", "杉浦 節子"], ["平松 成文", "原 映子"], ["本田 優", "榊原 美加"], ["村上 和穂", "金子 真弓"],
-    ["吉田 茂", "酒井 美早子"],
+    ["阿部 正三","阿部 里美"],["安藤 勉","新海 典江"],["安藤 安夫","上野 清美"],["石原 逸郎","石原 恵美子"],
+    ["井上 雅幹","井上 啓子"],["岡田 浩之","岡田 やす江"],["尾﨑 直也","林 仁美"],["近藤 貞司","近藤 知子"],
+    ["佐藤 寛","小西 ゆり子"],["早苗 哲也","渡辺 郁子"],["柴垣 宏行","福瀧 愛子"],["杉山 久八","北澤 由美子"],
+    ["須藤 進","小林 椿"],["関 守","岡谷 恵美子"],["戸田 光志","戸田 ひろ子"],["服部 清","米津 由里"],
+    ["早川 明彦","杉浦 節子"],["平松 成文","原 映子"],["本田 優","榊原 美加"],["村上 和穂","金子 真弓"],
+    ["吉田 茂","酒井 美早子"],
   ]},
   { section: "プロ・ボールルーム", cls: "選手権", event: "WTFQ", pairs: [
-    ["岩本 憲幸", "稲垣 はる美"], ["太田 雅士", "太田 薫"], ["岡 俊宏", "岡 瑞紀"], ["勝川 佳和", "清水 佳奈子"],
-    ["勝野 出", "浅海 愛"], ["楠本 和嵩", "加納 杏那"], ["柴田 真希", "柴田 綾子"], ["柴山 和樹", "平岩 英里"],
-    ["竹内 大祐", "竹内 桃子"], ["中野 雅章", "中野 由美恵"], ["新美 一輝", "山口 ひかり"], ["野田 幹也", "広瀬 真名"],
-    ["村澤 俊也", "鈴木 伶奈"], ["森田 貴久", "木全 志穂"], ["山﨑 雅則", "河内 知子"],
+    ["岩本 憲幸","稲垣 はる美"],["太田 雅士","太田 薫"],["岡 俊宏","岡 瑞紀"],["勝川 佳和","清水 佳奈子"],
+    ["勝野 出","浅海 愛"],["楠本 和嵩","加納 杏那"],["柴田 真希","柴田 綾子"],["柴山 和樹","平岩 英里"],
+    ["竹内 大祐","竹内 桃子"],["中野 雅章","中野 由美恵"],["新美 一輝","山口 ひかり"],["野田 幹也","広瀬 真名"],
+    ["村澤 俊也","鈴木 伶奈"],["森田 貴久","木全 志穂"],["山﨑 雅則","河内 知子"],
   ]},
   { section: "アマ・ラテン", cls: "選手権", event: "CSRPJ", pairs: [
-    ["櫻庭 幸哉", "神谷 さくら"], ["小栗 歩", "小栗 沙永子"], ["加藤 大喜", "小森 菜々美"], ["纈纈 大貴", "篠田 雛多"],
-    ["佐々木 寛斗", "加藤 紗理"], ["高橋 大最", "内川 摩耶"], ["西松 大翔", "森下 夏妃"], ["室戸 啓汰", "野田 麻緒"],
-    ["山下 慶太郎", "池田 綾香"],
+    ["櫻庭 幸哉","神谷 さくら"],["小栗 歩","小栗 沙永子"],["加藤 大喜","小森 菜々美"],["纈纈 大貴","篠田 雛多"],
+    ["佐々木 寛斗","加藤 紗理"],["高橋 大最","内川 摩耶"],["西松 大翔","森下 夏妃"],["室戸 啓汰","野田 麻緒"],
+    ["山下 慶太郎","池田 綾香"],
   ]},
 ];
-
-// プロ・ボールルーム選手権は準決勝/決勝が原簿では "WTVFQ" 表記になっているため、検索用に同一グループ扱いにする
-const normalizeEvent = (event) => (event === "WTVFQ" ? "WTFQ" : event);
+const normalizeEvent = event => (event === "WTVFQ" ? "WTFQ" : event);
 
 function buildParticipantIndex() {
-  const registry = new Map(); // person/couple name -> test bib number
+  const registry = new Map();
   let nextBib = 1;
-  const index = {};
-  const roster = [];
-
-  ENTRY_GROUPS.forEach((g) => {
-    const matches = ITEMS.filter(
-      (it) => !isSpecial(it.section) && it.section === g.section && it.cls === g.cls && normalizeEvent(it.event) === g.event
-    );
-    const firstItem = matches.reduce((a, b) => (a.no < b.no ? a : b), matches[0] || { time: "", no: 9999 });
-    const entries = g.pairs ? g.pairs.map((p) => p.join(" ・ ")) : g.solo;
+  const groupEntries = new Map();
+  ENTRY_GROUPS.forEach(g => {
+    const entries = g.pairs ? g.pairs.map(p => p.join(" ・ ")) : g.solo;
     const rosterEntries = [];
-
-    entries.forEach((name) => {
+    entries.forEach(name => {
       let bib = registry.get(name);
-      if (!bib) {
-        bib = String(nextBib++);
-        registry.set(name, bib);
-      }
-      if (!index[bib]) index[bib] = [];
-      index[bib].push({ section: g.section, cls: g.cls, event: g.event, time: firstItem.time, no: firstItem.no, name });
+      if (!bib) { bib = String(nextBib++); registry.set(name, bib); }
       rosterEntries.push({ bib, name });
     });
-
-    roster.push({ section: g.section, cls: g.cls, event: g.event, time: firstItem.time, no: firstItem.no, entries: rosterEntries });
+    groupEntries.set(`${g.section}|${g.cls}|${g.event}`, rosterEntries);
   });
-
-  roster.sort((a, b) => a.no - b.no);
-  const groupEntries = new Map();
-  roster.forEach((g) => groupEntries.set(`${g.section}|${g.cls}|${g.event}`, g.entries));
-
-  return { index, registry, roster, groupEntries };
+  return groupEntries;
 }
-const { index: PARTICIPANT_INDEX, registry: PARTICIPANT_REGISTRY, roster: PARTICIPANT_ROSTER, groupEntries: GROUP_ENTRIES } = buildParticipantIndex();
-
+const GROUP_ENTRIES = buildParticipantIndex();
 function entriesForItem(item) {
   if (isSpecial(item.section)) return null;
   return GROUP_ENTRIES.get(`${item.section}|${item.cls}|${normalizeEvent(item.event)}`) || null;
 }
-
 function parseRecallTokens(text) {
-  return text
-    .split(/[,、\s]+/)
-    .map((t) => t.trim())
-    .filter(Boolean);
+  return (text || "").split(/[,、\s]+/).map(t => t.trim()).filter(Boolean);
 }
-
 function sectionTone(section) {
   if (section.includes("ラテン")) return "latin";
   if (section.includes("ボールルーム")) return "ballroom";
@@ -216,776 +329,291 @@ function sectionTone(section) {
   if (section === "show") return "show";
   return "neutral";
 }
+const TONE_COLOR = { latin: "#a8362b", ballroom: "#2c4a73", break: "#5a5a52", ceremony: "#b8901f", show: "#8a5fae", neutral: "#7a7a72" };
 
-const TONE_STRIPE = {
-  latin: "#a8362b",
-  ballroom: "#2c4a73",
-  break: "#5a5a52",
-  ceremony: "#b8901f",
-  show: "#8a5fae",
-  neutral: "#7a7a72",
-};
-
-const STORAGE_KEY = "b_and_g_progress_v1";
-const STAFF_PIN = "2929"; // 運営モードの合言葉。必要に応じて変更してください
-
-export default function CompetitionTracker() {
-  const [view, setView] = useState("progress"); // 'progress' | 'search' | 'roster'
-  const [expandedRows, setExpandedRows] = useState(() => new Set());
-  const [mode, setMode] = useState("viewer"); // 'staff' | 'viewer'
-  const [unlocked, setUnlocked] = useState(false);
-  const [showPinPrompt, setShowPinPrompt] = useState(false);
-  const [pinValue, setPinValue] = useState("");
-  const [pinError, setPinError] = useState(false);
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [updatedAt, setUpdatedAt] = useState(null);
-  const [recalls, setRecalls] = useState({}); // { [no]: "12, 15, 22, 30" }
-  const [recallDraft, setRecallDraft] = useState("");
-  const [recallSaved, setRecallSaved] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [bibQuery, setBibQuery] = useState("");
-  const listRef = useRef(null);
-  const pollRef = useRef(null);
-
-  // ?mode=viewer で開いた場合は運営への切り替えボタン自体を表示しない
-  const [viewerOnlyLink] = useState(() => {
-    try {
-      return new URLSearchParams(window.location.search).get("mode") === "viewer";
-    } catch (e) {
-      return false;
-    }
-  });
-
-  const requestStaffMode = () => {
-    if (unlocked) {
-      setMode("staff");
-      return;
-    }
-    setPinValue("");
-    setPinError(false);
-    setShowPinPrompt(true);
-  };
-
-  const submitPin = () => {
-    if (pinValue === STAFF_PIN) {
-      setUnlocked(true);
-      setShowPinPrompt(false);
-      setMode("staff");
-    } else {
-      setPinError(true);
-    }
-  };
-
-  const lockStaffMode = () => {
-    setUnlocked(false);
-    setMode("viewer");
-  };
-
-  const applyRemote = useCallback((idx, ts, recallMap) => {
-    setCurrentIdx((prev) => (idx !== prev ? idx : prev));
-    setUpdatedAt(ts);
-    if (recallMap) setRecalls(recallMap);
-  }, []);
-
-  const fetchState = useCallback(async () => {
-    try {
-      const res = await window.storage.get(STORAGE_KEY, true);
-      if (res && res.value) {
-        const parsed = JSON.parse(res.value);
-        applyRemote(parsed.currentIdx ?? 0, parsed.updatedAt ?? null, parsed.recalls ?? {});
-      }
-    } catch (e) {
-      // key not created yet — that's fine, stay at default
-    } finally {
-      setLoaded(true);
-    }
-  }, [applyRemote]);
-
-  useEffect(() => {
-    fetchState();
-    pollRef.current = setInterval(fetchState, 4000);
-    return () => clearInterval(pollRef.current);
-  }, [fetchState]);
-
-  const pushState = async (idx, recallMap = recalls) => {
-    const ts = new Date().toISOString();
-    setCurrentIdx(idx);
-    setUpdatedAt(ts);
-    try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify({ currentIdx: idx, updatedAt: ts, recalls: recallMap }), true);
-    } catch (e) {
-      console.error("保存に失敗しました", e);
-    }
-  };
-
-  const saveRecall = async () => {
-    const noKey = String(ITEMS[currentIdx].no);
-    const nextRecalls = { ...recalls, [noKey]: recallDraft.trim() };
-    setRecalls(nextRecalls);
-    setRecallSaved(true);
-    setExpandedRows((prev) => new Set(prev).add(ITEMS[currentIdx].no));
-    setTimeout(() => setRecallSaved(false), 1500);
-    await pushState(currentIdx, nextRecalls);
-  };
-
-  const toggleRow = (no) => {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(no)) next.delete(no);
-      else next.add(no);
-      return next;
-    });
-  };
-
-  const goNext = () => currentIdx < ITEMS.length - 1 && pushState(currentIdx + 1);
-  const goPrev = () => currentIdx > 0 && pushState(currentIdx - 1);
-  const resetAll = () => pushState(0);
-
-  useEffect(() => {
-    const noKey = String(ITEMS[currentIdx].no);
-    setRecallDraft(recalls[noKey] ?? "");
-  }, [currentIdx, recalls]);
-
-  useEffect(() => {
-    if (!listRef.current) return;
-    const el = listRef.current.querySelector(`[data-row="${currentIdx}"]`);
-    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [currentIdx, loaded]);
-
-  const current = ITEMS[currentIdx];
-  const next = ITEMS[currentIdx + 1];
-  const currentRecall = recalls[String(current.no)];
-  const progressPct = Math.round(((currentIdx + 1) / ITEMS.length) * 100);
-
-  return (
-    <div style={styles.page}>
-      <style>{`
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #3a4256; border-radius: 4px; }
-        .row-btn:active { transform: scale(0.98); }
-        input:focus-visible { box-shadow: 0 0 0 2px #c9a227; }
-        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-      `}</style>
-
-      {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.headerTop}>
-          <div>
-            <div style={styles.eyebrow}>PROGRESS BOARD · テスト運用</div>
-            <h1 style={styles.title}>2026 前期中部日本ダンス選手権</h1>
-            <div style={styles.subtitle}>併催：2026 中部ダンスフェスティバル in 名古屋</div>
-          </div>
-          <div style={styles.modeToggle}>
-            {viewerOnlyLink ? (
-              <span style={styles.viewerOnlyTag}><Eye size={14} style={{ marginRight: 6 }} /> 観覧用</span>
-            ) : (
-              <>
-                <button
-                  onClick={() => setMode("viewer")}
-                  style={{ ...styles.modeBtn, ...(mode === "viewer" ? styles.modeBtnActive : {}) }}
-                >
-                  <Eye size={14} style={{ marginRight: 6 }} /> 観覧
-                </button>
-                <button
-                  onClick={mode === "staff" ? lockStaffMode : requestStaffMode}
-                  style={{ ...styles.modeBtn, ...(mode === "staff" ? styles.modeBtnActive : {}) }}
-                >
-                  <Radio size={14} style={{ marginRight: 6 }} /> 運営{mode === "staff" ? "中" : ""}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div style={styles.tabBar}>
-          <button
-            onClick={() => setView("progress")}
-            style={{ ...styles.tabBtn, ...(view === "progress" ? styles.tabBtnActive : {}) }}
-          >
-            進行状況
-          </button>
-          <button
-            onClick={() => setView("search")}
-            style={{ ...styles.tabBtn, ...(view === "search" ? styles.tabBtnActive : {}) }}
-          >
-            <Search size={13} style={{ marginRight: 5 }} /> 出場種目検索
-          </button>
-          <button
-            onClick={() => setView("roster")}
-            style={{ ...styles.tabBtn, ...(view === "roster" ? styles.tabBtnActive : {}) }}
-          >
-            <Users size={13} style={{ marginRight: 5 }} /> 出場者一覧
-          </button>
-        </div>
-
-        {showPinPrompt && (
-          <div style={styles.pinOverlay}>
-            <div style={styles.pinCard}>
-              <div style={styles.pinTitle}>運営モードの合言葉</div>
-              <input
-                type="password"
-                inputMode="numeric"
-                autoFocus
-                value={pinValue}
-                onChange={(e) => {
-                  setPinValue(e.target.value);
-                  setPinError(false);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && submitPin()}
-                style={styles.pinInput}
-                placeholder="••••"
-              />
-              {pinError && <div style={styles.pinErrorText}>合言葉が違います</div>}
-              <div style={styles.pinBtnRow}>
-                <button onClick={() => setShowPinPrompt(false)} style={{ ...styles.ctrlBtn, ...styles.ctrlGhost }}>
-                  キャンセル
-                </button>
-                <button onClick={submitPin} style={{ ...styles.ctrlBtn, ...styles.ctrlPrimary }}>
-                  入る
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {view === "progress" && (
-          <>
-            <div style={styles.progressTrack}>
-              <div style={{ ...styles.progressFill, width: `${progressPct}%` }} />
-            </div>
-            <div style={styles.progressLabel}>
-              NO.{current.no} / {ITEMS.length}　{progressPct}%
-            </div>
-          </>
-        )}
-      </header>
-
-      {view === "progress" ? (
-        <>
-      {/* Now card */}
-      <section style={{ ...styles.nowCard, borderLeftColor: TONE_STRIPE[sectionTone(current.section)] }}>
-        <div style={styles.nowLabel}>NOW</div>
-        {isSpecial(current.section) ? (
-          <div style={styles.nowSpecialTitle}>{current.cls}</div>
-        ) : (
-          <>
-            <div style={styles.nowMainRow}>
-              <span style={styles.nowSection}>{current.section}</span>
-              <span style={styles.nowClass}>{current.cls}</span>
-            </div>
-            <div style={styles.nowEventRow}>
-              <span style={styles.nowEvent}>{current.event}</span>
-              <span style={styles.nowRound}>{current.round}</span>
-            </div>
-            <div style={styles.nowMeta}>
-              <span style={styles.metaChip}><Clock size={13} /> {current.time}</span>
-              {current.heat > 0 && <span style={styles.metaChip}>ヒート {current.heat}</span>}
-              {current.pairs > 0 && <span style={styles.metaChip}><Users size={13} /> {current.pairs}組</span>}
-              {current.judge && <span style={styles.metaChip}><Gavel size={13} /> 主任 {current.judge}</span>}
-            </div>
-          </>
-        )}
-        {currentRecall ? (
-          <div style={styles.recallBanner}>
-            <div style={styles.recallLabel}>勝ち上がり</div>
-            <div style={styles.recallNumbers}>{currentRecall}</div>
-          </div>
-        ) : (
-          current.up != null && current.up > 0 && (
-            <div style={styles.upBanner}>勝ち上がり {current.up}組(背番号未入力)</div>
-          )
-        )}
-      </section>
-
-      {/* Next up strip */}
-      {next && (
-        <div style={styles.nextStrip}>
-          <span style={styles.nextLabel}>NEXT</span>
-          <span style={styles.nextText}>
-            {next.time}　{isSpecial(next.section) ? next.cls : `${next.section} ${next.cls} ${next.event} ${next.round}`}
-          </span>
-        </div>
-      )}
-
-      {/* Staff controls */}
-      {mode === "staff" && (
-        <div style={styles.controls}>
-          <button onClick={goPrev} disabled={currentIdx === 0} style={styles.ctrlBtn}>
-            <ChevronLeft size={18} /> 戻す
-          </button>
-          <button onClick={resetAll} style={{ ...styles.ctrlBtn, ...styles.ctrlGhost }}>
-            <RotateCcw size={16} /> 最初へ
-          </button>
-          <button onClick={goNext} disabled={currentIdx === ITEMS.length - 1} style={{ ...styles.ctrlBtn, ...styles.ctrlPrimary }}>
-            進める <ChevronRight size={18} />
-          </button>
-        </div>
-      )}
-
-      {mode === "staff" && !isSpecial(current.section) && current.up != null && current.up > 0 && (
-        <div style={styles.recallEntry}>
-          <div style={styles.recallEntryLabel}>勝ち上がり背番号を入力(カンマ区切り)</div>
-          <div style={styles.recallEntryRow}>
-            <input
-              type="text"
-              value={recallDraft}
-              onChange={(e) => setRecallDraft(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && saveRecall()}
-              placeholder="例: 12, 15, 22, 30"
-              style={styles.recallInput}
-            />
-            <button onClick={saveRecall} style={{ ...styles.ctrlBtn, ...styles.ctrlPrimary, flex: "0 0 auto", padding: "10px 16px" }}>
-              {recallSaved ? "保存済" : "表示する"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Timetable */}
-      <div style={styles.listWrap} ref={listRef}>
-        {ITEMS.map((item, idx) => {
-          const state = idx < currentIdx ? "done" : idx === currentIdx ? "current" : "upcoming";
-          const tone = sectionTone(item.section);
-          const entries = entriesForItem(item);
-          const isExpanded = expandedRows.has(item.no);
-          return (
-            <div key={item.no}>
-              <div
-                data-row={idx}
-                className="row-btn"
-                onClick={() => mode === "staff" && pushState(idx)}
-                style={{
-                  ...styles.row,
-                  ...(state === "current" ? styles.rowCurrent : {}),
-                  opacity: state === "done" ? 0.45 : 1,
-                  cursor: mode === "staff" ? "pointer" : "default",
-                  borderLeft: `4px solid ${TONE_STRIPE[tone]}`,
-                }}
-              >
-                <div style={styles.rowNo}>{item.no}</div>
-                <div style={styles.rowTime}>{item.time}</div>
-                <div style={styles.rowBody}>
-                  {isSpecial(item.section) ? (
-                    <span style={styles.rowSpecial}>{item.cls}</span>
-                  ) : (
-                    <span>
-                      <strong>{item.section}</strong> {item.cls} {item.event} {item.round}
-                      {item.heat > 1 && ` (${item.heat}ヒート)`}
-                    </span>
-                  )}
-                  {recalls[String(item.no)] && (
-                    <div style={styles.rowRecall}>勝ち上がり: {recalls[String(item.no)]}</div>
-                  )}
-                </div>
-                <div style={styles.rowStatus}>
-                  {state === "current" && <span style={styles.badgeNow}>進行中</span>}
-                  {state === "done" && <span style={styles.badgeDone}>終了</span>}
-                  {entries && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleRow(item.no);
-                      }}
-                      style={styles.expandBtn}
-                    >
-                      {isExpanded ? "背番号 ▲" : "背番号 ▼"}
-                    </button>
-                  )}
-                </div>
-              </div>
-              {isExpanded && entries && (
-                <div style={styles.bibChipRow}>
-                  {(() => {
-                    const advanced = new Set(parseRecallTokens(recalls[String(item.no)] || ""));
-                    return entries.map((e) => (
-                      <span key={e.bib} style={advanced.has(e.bib) ? styles.bibChipAdvanced : styles.bibChip}>
-                        {e.bib}
-                      </span>
-                    ));
-                  })()}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-        </>
-      ) : view === "search" ? (
-        <section style={styles.searchPanel}>
-          <div style={styles.searchNotice}>
-            ※ 選手名・出場種目は実際のエントリーデータです。背番号は公式には未確定のため、テスト用に仮番号を振っています。背番号か氏名の一部で検索できます。
-          </div>
-          <div style={styles.searchInputRow}>
-            <Search size={16} style={{ color: "#8b93a8" }} />
-            <input
-              type="text"
-              value={bibQuery}
-              onChange={(e) => setBibQuery(e.target.value.trim())}
-              placeholder="背番号 または 氏名の一部"
-              style={styles.searchInput}
-            />
-          </div>
-
-          {bibQuery && (() => {
-            const isNumeric = /^\d+$/.test(bibQuery);
-            let matchedBibs = [];
-            if (isNumeric) {
-              matchedBibs = PARTICIPANT_INDEX[bibQuery] ? [bibQuery] : [];
-            } else {
-              matchedBibs = Array.from(PARTICIPANT_REGISTRY.entries())
-                .filter(([name]) => name.includes(bibQuery))
-                .map(([, bib]) => bib);
-            }
-            return (
-              <div style={styles.searchResults}>
-                {matchedBibs.length === 0 ? (
-                  <div style={styles.searchEmpty}>「{bibQuery}」に一致する出場者が見つかりません</div>
-                ) : (
-                  matchedBibs.map((bib) => (
-                    <div key={bib} style={styles.searchPersonBlock}>
-                      <div style={styles.searchResultHeader}>
-                        背番号(仮) {bib} — {PARTICIPANT_INDEX[bib][0].name}
-                      </div>
-                      {PARTICIPANT_INDEX[bib]
-                        .slice()
-                        .sort((a, b) => a.no - b.no)
-                        .map((r, i) => (
-                          <div key={i} style={styles.searchResultRow}>
-                            <div style={styles.searchResultTime}>{r.time}</div>
-                            <div style={styles.searchResultBody}>
-                              <strong>{r.section}</strong> {r.cls} {r.event}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ))
-                )}
-              </div>
-            );
-          })()}
-        </section>
-      ) : (
-        <section style={styles.searchPanel}>
-          <div style={styles.searchNotice}>
-            ※ 出場者一覧(背番号は仮番号)。競技順に並んでいます。
-          </div>
-          {PARTICIPANT_ROSTER.map((g, gi) => (
-            <div key={gi} style={styles.rosterGroup}>
-              <div style={styles.rosterGroupHeader}>
-                {g.time}　<strong>{g.section}</strong> {g.cls} {g.event}({g.entries.length}組)
-              </div>
-              {g.entries.map((e, ei) => (
-                <div key={ei} style={styles.rosterEntryRow}>
-                  <span style={styles.rosterBib}>{e.bib}</span>
-                  <span style={styles.rosterName}>{e.name}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </section>
-      )}
-
-      <footer style={styles.footer}>
-        {view === "progress" ? (
-          <>
-            {updatedAt ? `最終更新 ${new Date(updatedAt).toLocaleTimeString("ja-JP")}` : "同期待機中"}　
-            {mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
-          </>
-        ) : view === "search" ? (
-          "· 出場種目検索（仮データ）"
-        ) : (
-          "· 出場者一覧（背番号は仮）"
-        )}
-      </footer>
-    </div>
-  );
+/* ============ ネットワーク ============ */
+async function fetchSharedState() {
+  const res = await fetch(GAS_ENDPOINT, { method: "GET" });
+  if (!res.ok) throw new Error("fetch failed: " + res.status);
+  return await res.json();
+}
+async function pushSharedState(state) {
+  const url = `${GAS_ENDPOINT}?data=${encodeURIComponent(JSON.stringify(state))}`;
+  await fetch(url, { method: "GET", mode: "no-cors" });
 }
 
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#171b26",
-    color: "#eae6da",
-    fontFamily: "'Hiragino Sans', 'Yu Gothic', system-ui, -apple-system, sans-serif",
-    paddingBottom: 24,
-  },
-  header: {
-    padding: "20px 18px 14px",
-    background: "linear-gradient(180deg, #1d2333 0%, #171b26 100%)",
-    borderBottom: "1px solid #2a3145",
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-  },
-  headerTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
-  eyebrow: {
-    fontSize: 11,
-    letterSpacing: "0.14em",
-    color: "#c9a227",
-    fontWeight: 700,
-    marginBottom: 4,
-  },
-  title: { fontSize: 19, fontWeight: 700, margin: 0, color: "#f4f1ea" },
-  subtitle: { fontSize: 12, color: "#8b93a8", marginTop: 3 },
-  modeToggle: { display: "flex", gap: 6, background: "#11141d", padding: 4, borderRadius: 10 },
-  modeBtn: {
-    display: "flex",
-    alignItems: "center",
-    border: "none",
-    background: "transparent",
-    color: "#8b93a8",
-    fontSize: 12,
-    fontWeight: 600,
-    padding: "7px 10px",
-    borderRadius: 7,
-    cursor: "pointer",
-  },
-  modeBtnActive: { background: "#2c4a73", color: "#fff" },
-  viewerOnlyTag: {
-    display: "flex",
-    alignItems: "center",
-    fontSize: 12,
-    fontWeight: 600,
-    color: "#8b93a8",
-    padding: "7px 10px",
-  },
-  progressTrack: { marginTop: 14, height: 6, background: "#262c3d", borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: "100%", background: "linear-gradient(90deg, #c9a227, #e0bb4a)", transition: "width 0.4s ease" },
-  progressLabel: { marginTop: 6, fontSize: 11, color: "#8b93a8", letterSpacing: "0.04em" },
-
-  tabBar: { display: "flex", gap: 6, marginTop: 14 },
-  tabBtn: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "1px solid #2a3145",
-    background: "transparent",
-    color: "#8b93a8",
-    fontSize: 12,
-    fontWeight: 700,
-    padding: "8px 10px",
-    borderRadius: 8,
-    cursor: "pointer",
-  },
-  tabBtnActive: { background: "#242b3d", color: "#f4f1ea", borderColor: "#3a4256" },
-
-  searchPanel: { margin: "16px 16px 0" },
-  searchNotice: { fontSize: 11, color: "#8b93a8", background: "#1a2030", padding: "8px 12px", borderRadius: 8, marginBottom: 12, lineHeight: 1.5 },
-  searchInputRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    background: "#1f2537",
-    border: "1px solid #2a3145",
-    borderRadius: 10,
-    padding: "10px 12px",
-  },
-  searchInput: { flex: 1, border: "none", background: "transparent", color: "#f4f1ea", fontSize: 16, outline: "none" },
-  searchResults: { marginTop: 14 },
-  searchPersonBlock: { marginBottom: 18 },
-  searchResultHeader: { fontSize: 12, color: "#8b93a8", marginBottom: 8, fontWeight: 700 },
-  searchEmpty: { fontSize: 13, color: "#8b93a8", padding: "16px 4px" },
-  searchResultRow: {
-    display: "flex",
-    gap: 12,
-    padding: "10px 12px",
-    background: "#1a2030",
-    borderRadius: 10,
-    marginBottom: 8,
-    alignItems: "baseline",
-  },
-  searchResultTime: { fontSize: 12, color: "#e0bb4a", fontWeight: 700, flexShrink: 0, width: 44 },
-  searchResultBody: { fontSize: 13, color: "#dfe3ec" },
-
-  nowCard: {
-    margin: "16px 16px 0",
-    background: "#1f2537",
-    borderRadius: 14,
-    borderLeft: "6px solid",
-    padding: "16px 18px",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-  },
-  nowLabel: { fontSize: 10, letterSpacing: "0.2em", color: "#c9a227", fontWeight: 800, marginBottom: 8 },
-  nowSpecialTitle: { fontSize: 18, fontWeight: 700, color: "#f4f1ea", lineHeight: 1.4 },
-  nowMainRow: { display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" },
-  nowSection: { fontSize: 15, fontWeight: 700, color: "#f4f1ea" },
-  nowClass: { fontSize: 14, color: "#c9cfdd" },
-  nowEventRow: { marginTop: 4, display: "flex", alignItems: "baseline", gap: 10 },
-  nowEvent: { fontSize: 26, fontWeight: 800, letterSpacing: "0.02em", color: "#f4f1ea" },
-  nowRound: { fontSize: 14, color: "#e0bb4a", fontWeight: 700 },
-  nowMeta: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 },
-  metaChip: {
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-    fontSize: 12,
-    background: "#171b26",
-    color: "#b7bdcc",
-    padding: "5px 10px",
-    borderRadius: 20,
-  },
-  upBanner: {
-    marginTop: 12,
-    fontSize: 12,
-    fontWeight: 700,
-    color: "#171b26",
-    background: "#e0bb4a",
-    display: "inline-block",
-    padding: "4px 10px",
-    borderRadius: 20,
-  },
-  recallBanner: {
-    marginTop: 12,
-    background: "#e0bb4a",
-    borderRadius: 10,
-    padding: "8px 12px",
-  },
-  recallLabel: { fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#5c4a0e" },
-  recallNumbers: { fontSize: 16, fontWeight: 800, color: "#171b26", marginTop: 2, letterSpacing: "0.02em" },
-
-  nextStrip: {
-    margin: "10px 16px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 12,
-    color: "#8b93a8",
-    padding: "8px 14px",
-    background: "#1a2030",
-    borderRadius: 10,
-  },
-  nextLabel: { fontWeight: 800, color: "#5a6e94", letterSpacing: "0.1em", fontSize: 10 },
-  nextText: { color: "#c9cfdd" },
-
-  controls: { display: "flex", gap: 8, margin: "14px 16px 0" },
-  ctrlBtn: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    border: "1px solid #2a3145",
-    background: "#1f2537",
-    color: "#eae6da",
-    fontSize: 14,
-    fontWeight: 700,
-    padding: "12px 10px",
-    borderRadius: 10,
-    cursor: "pointer",
-  },
-  ctrlPrimary: { background: "#c9a227", color: "#171b26", border: "none" },
-  ctrlGhost: { flex: "0 0 auto", padding: "12px 14px", color: "#8b93a8" },
-
-  recallEntry: { margin: "10px 16px 0", background: "#1f2537", border: "1px solid #2a3145", borderRadius: 10, padding: "10px 12px" },
-  recallEntryLabel: { fontSize: 11, color: "#8b93a8", marginBottom: 6 },
-  recallEntryRow: { display: "flex", gap: 8 },
-  recallInput: {
-    flex: 1,
-    fontSize: 14,
-    padding: "10px 10px",
-    borderRadius: 8,
-    border: "1px solid #2a3145",
-    background: "#171b26",
-    color: "#f4f1ea",
-    outline: "none",
-  },
-
-  listWrap: { margin: "16px 12px 0", maxHeight: "48vh", overflowY: "auto", borderRadius: 12, background: "#1a2030" },
-  row: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "10px 12px",
-    borderBottom: "1px solid #232a3c",
-    fontSize: 13,
-  },
-  rowCurrent: { background: "#26314a" },
-  rowNo: { width: 22, fontSize: 11, color: "#5a6e94", fontWeight: 700, flexShrink: 0 },
-  rowTime: { width: 44, fontSize: 12, color: "#8b93a8", flexShrink: 0 },
-  rowBody: { flex: 1, color: "#dfe3ec", lineHeight: 1.35 },
-  rowSpecial: { color: "#b7bdcc", fontStyle: "italic" },
-  rowRecall: { fontSize: 11, color: "#e0bb4a", marginTop: 2 },
-  rowStatus: { flexShrink: 0 },
-  badgeNow: { fontSize: 10, fontWeight: 800, background: "#e0bb4a", color: "#171b26", padding: "3px 8px", borderRadius: 12 },
-  badgeDone: { fontSize: 10, color: "#5a6e94" },
-  expandBtn: {
-    display: "block",
-    marginTop: 4,
-    fontSize: 10,
-    color: "#5a6e94",
-    background: "transparent",
-    border: "none",
-    padding: 0,
-    cursor: "pointer",
-  },
-  bibChipRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 6,
-    padding: "8px 12px 12px 46px",
-    background: "#171b26",
-    borderBottom: "1px solid #232a3c",
-  },
-  bibChip: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#c9cfdd",
-    background: "#242b3d",
-    padding: "3px 9px",
-    borderRadius: 12,
-  },
-  bibChipAdvanced: {
-    fontSize: 11,
-    fontWeight: 800,
-    color: "#171b26",
-    background: "#e0bb4a",
-    padding: "3px 9px",
-    borderRadius: 12,
-  },
-  recallPreview: { marginTop: 8, fontSize: 12, color: "#e0bb4a", lineHeight: 1.5 },
-
-  rosterGroup: { marginBottom: 16 },
-  rosterGroupHeader: { fontSize: 12, color: "#8b93a8", marginBottom: 6, lineHeight: 1.4 },
-  rosterEntryRow: { display: "flex", gap: 10, alignItems: "baseline", padding: "6px 12px", background: "#1a2030", borderRadius: 8, marginBottom: 4 },
-  rosterBib: { fontSize: 12, fontWeight: 800, color: "#e0bb4a", width: 30, flexShrink: 0 },
-  rosterName: { fontSize: 13, color: "#dfe3ec" },
-
-  footer: { textAlign: "center", fontSize: 11, color: "#5a6e94", marginTop: 14 },
-
-  pinOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(10,12,18,0.72)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 50,
-    padding: 20,
-  },
-  pinCard: {
-    width: "100%",
-    maxWidth: 280,
-    background: "#1f2537",
-    border: "1px solid #2a3145",
-    borderRadius: 14,
-    padding: 20,
-    boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
-  },
-  pinTitle: { fontSize: 13, fontWeight: 700, color: "#c9cfdd", marginBottom: 10 },
-  pinInput: {
-    width: "100%",
-    fontSize: 20,
-    letterSpacing: "0.3em",
-    textAlign: "center",
-    padding: "10px 8px",
-    borderRadius: 8,
-    border: "1px solid #2a3145",
-    background: "#171b26",
-    color: "#f4f1ea",
-    outline: "none",
-  },
-  pinErrorText: { fontSize: 11, color: "#d9694f", marginTop: 6 },
-  pinBtnRow: { display: "flex", gap: 8, marginTop: 14 },
+/* ============ 状態 ============ */
+const state = {
+  mode: "viewer",
+  unlocked: false,
+  showPinPrompt: false,
+  pinValue: "",
+  pinError: false,
+  currentIdx: 0,
+  updatedAt: null,
+  recalls: {},
+  recallDraft: "",
+  recallSaved: false,
+  loaded: false,
+  saveError: false,
+  loadError: false,
+  expandedRows: new Set(),
+  viewerOnlyLink: (() => {
+    try { return new URLSearchParams(location.search).get("mode") === "viewer"; }
+    catch (e) { return false; }
+  })(),
 };
+
+function icon(name, size) {
+  size = size || 13;
+  const paths = {
+    clock: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+    users: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+    gavel: `<path d="m14.5 12.5-8 8a2.12 2.12 0 1 1-3-3l8-8"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/>`,
+    eye: `<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>`,
+    radio: `<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-8.49a6 6 0 0 0 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>`,
+    chevleft: `<polyline points="15 18 9 12 15 6"/>`,
+    chevright: `<polyline points="9 18 15 12 9 6"/>`,
+    reset: `<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>`,
+  };
+  return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[name] || ""}</svg>`;
+}
+
+/* ============ 通信ロジック ============ */
+async function fetchState() {
+  try {
+    const parsed = await fetchSharedState();
+    state.currentIdx = parsed.currentIdx ?? 0;
+    state.updatedAt = parsed.updatedAt ?? null;
+    state.recalls = parsed.recalls ?? {};
+    state.loadError = false;
+  } catch (e) {
+    console.error("読み込みに失敗しました", e);
+    state.loadError = true;
+  } finally {
+    state.loaded = true;
+    render();
+  }
+}
+
+async function pushState(idx, recallMap) {
+  recallMap = recallMap || state.recalls;
+  const ts = new Date().toISOString();
+  state.currentIdx = idx;
+  state.updatedAt = ts;
+  render();
+  try {
+    await pushSharedState({ currentIdx: idx, updatedAt: ts, recalls: recallMap });
+    state.saveError = false;
+  } catch (e) {
+    console.error("保存に失敗しました", e);
+    state.saveError = true;
+  }
+  render();
+}
+
+function saveRecall() {
+  const noKey = String(ITEMS[state.currentIdx].no);
+  const nextRecalls = { ...state.recalls, [noKey]: state.recallDraft.trim() };
+  state.recalls = nextRecalls;
+  state.recallSaved = true;
+  state.expandedRows.add(ITEMS[state.currentIdx].no);
+  render();
+  setTimeout(() => { state.recallSaved = false; render(); }, 1500);
+  pushState(state.currentIdx, nextRecalls);
+}
+
+function goNext() { if (state.currentIdx < ITEMS.length - 1) pushState(state.currentIdx + 1); }
+function goPrev() { if (state.currentIdx > 0) pushState(state.currentIdx - 1); }
+function resetAll() { pushState(0); }
+function jumpTo(idx) { if (state.mode === "staff") pushState(idx); }
+function toggleRow(no) {
+  if (state.expandedRows.has(no)) state.expandedRows.delete(no); else state.expandedRows.add(no);
+  render();
+}
+function requestStaffMode() {
+  if (state.unlocked) { state.mode = "staff"; render(); return; }
+  state.pinValue = ""; state.pinError = false; state.showPinPrompt = true; render();
+}
+function submitPin() {
+  if (state.pinValue === STAFF_PIN) { state.unlocked = true; state.showPinPrompt = false; state.mode = "staff"; }
+  else { state.pinError = true; }
+  render();
+}
+function lockStaffMode() { state.unlocked = false; state.mode = "viewer"; render(); }
+function setViewerMode() { state.mode = "viewer"; render(); }
+function onRecallDraftChange(v) { state.recallDraft = v; }
+function onPinChange(v) { state.pinValue = v; state.pinError = false; }
+
+/* ============ 描画 ============ */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+function renderNowCard(current) {
+  const tone = sectionTone(current.section);
+  const noKey = String(current.no);
+  const currentRecall = state.recalls[noKey];
+  let banner = "";
+  if (currentRecall) {
+    banner = `<div class="recall-banner"><div class="recall-label">勝ち上がり</div><div class="recall-numbers">${esc(currentRecall)}</div></div>`;
+  } else if (current.up != null && current.up > 0) {
+    banner = `<div class="up-banner">勝ち上がり ${current.up}組(背番号未入力)</div>`;
+  }
+  let body;
+  if (isSpecial(current.section)) {
+    body = `<div class="now-special">${esc(current.cls)}</div>`;
+  } else {
+    body = `
+      <div class="now-main-row"><span class="now-section">${esc(current.section)}</span><span class="now-class">${esc(current.cls)}</span></div>
+      <div class="now-event-row"><span class="now-event">${esc(current.event)}</span><span class="now-round">${esc(current.round)}</span></div>
+      <div class="now-meta">
+        <span class="meta-chip">${icon("clock")} ${esc(current.time)}</span>
+        ${current.heat > 0 ? `<span class="meta-chip">ヒート ${current.heat}</span>` : ""}
+        ${current.pairs > 0 ? `<span class="meta-chip">${icon("users")} ${current.pairs}組</span>` : ""}
+        ${current.judge ? `<span class="meta-chip">${icon("gavel")} 主任 ${esc(current.judge)}</span>` : ""}
+      </div>`;
+  }
+  return `<section class="now-card" style="border-left-color:${TONE_COLOR[tone]}"><div class="now-label">NOW</div>${body}${banner}</section>`;
+}
+
+function render() {
+  const current = ITEMS[state.currentIdx];
+  const next = ITEMS[state.currentIdx + 1];
+  const progressPct = Math.round(((state.currentIdx + 1) / ITEMS.length) * 100);
+
+  let modeToggleHtml;
+  if (state.viewerOnlyLink) {
+    modeToggleHtml = `<span class="viewer-only-tag">${icon("eye")} 観覧用</span>`;
+  } else {
+    modeToggleHtml = `
+      <button class="mode-btn ${state.mode === "viewer" ? "active" : ""}" onclick="setViewerMode()">${icon("eye")} 観覧</button>
+      <button class="mode-btn ${state.mode === "staff" ? "active" : ""}" onclick="${state.mode === "staff" ? "lockStaffMode()" : "requestStaffMode()"}">${icon("radio")} 運営${state.mode === "staff" ? "中" : ""}</button>`;
+  }
+
+  const pinHtml = state.showPinPrompt ? `
+    <div class="pin-overlay">
+      <div class="pin-card">
+        <div class="pin-title">運営モードの合言葉</div>
+        <input class="pin-input" type="password" inputmode="numeric" autofocus value="${esc(state.pinValue)}"
+          oninput="onPinChange(this.value)" onkeydown="if(event.key==='Enter') submitPin()" placeholder="••••" />
+        ${state.pinError ? `<div class="pin-error">合言葉が違います</div>` : ""}
+        <div class="pin-btn-row">
+          <button class="ctrl-btn ctrl-ghost" onclick="state.showPinPrompt=false; render();">キャンセル</button>
+          <button class="ctrl-btn ctrl-primary" onclick="submitPin()">入る</button>
+        </div>
+      </div>
+    </div>` : "";
+
+  const controlsHtml = state.mode === "staff" ? `
+    <div class="controls">
+      <button class="ctrl-btn" ${state.currentIdx === 0 ? "disabled" : ""} onclick="goPrev()">${icon("chevleft",18)} 戻す</button>
+      <button class="ctrl-btn ctrl-ghost" onclick="resetAll()">${icon("reset",16)} 最初へ</button>
+      <button class="ctrl-btn ctrl-primary" ${state.currentIdx === ITEMS.length - 1 ? "disabled" : ""} onclick="goNext()">進める ${icon("chevright",18)}</button>
+    </div>` : "";
+
+  const recallEntryHtml = (state.mode === "staff" && !isSpecial(current.section) && current.up != null && current.up > 0) ? `
+    <div class="recall-entry">
+      <div class="recall-entry-label">勝ち上がり背番号を入力(カンマ区切り)</div>
+      <div class="recall-entry-row">
+        <input class="recall-input" type="text" value="${esc(state.recallDraft)}"
+          oninput="onRecallDraftChange(this.value)" onkeydown="if(event.key==='Enter') saveRecall()" placeholder="例: 12, 15, 22, 30" />
+        <button class="ctrl-btn ctrl-primary" style="flex:0 0 auto; padding:10px 16px;" onclick="saveRecall()">${state.recallSaved ? "保存済" : "表示する"}</button>
+      </div>
+    </div>` : "";
+
+  const nextHtml = next ? `
+    <div class="next-strip">
+      <span class="next-label">NEXT</span>
+      <span class="next-text">${esc(next.time)}　${isSpecial(next.section) ? esc(next.cls) : `${esc(next.section)} ${esc(next.cls)} ${esc(next.event)} ${esc(next.round)}`}</span>
+    </div>` : "";
+
+  const rowsHtml = ITEMS.map((item, idx) => {
+    const rstate = idx < state.currentIdx ? "done" : idx === state.currentIdx ? "current" : "upcoming";
+    const tone = sectionTone(item.section);
+    const entries = entriesForItem(item);
+    const isExpanded = state.expandedRows.has(item.no);
+    const recallText = state.recalls[String(item.no)];
+    const rowClasses = ["row", rstate === "current" ? "current" : "", rstate === "done" ? "done" : "", state.mode === "staff" ? "staff-clickable" : ""].filter(Boolean).join(" ");
+
+    let bodyHtml;
+    if (isSpecial(item.section)) {
+      bodyHtml = `<span class="row-special">${esc(item.cls)}</span>`;
+    } else {
+      bodyHtml = `<span><strong>${esc(item.section)}</strong> ${esc(item.cls)} ${esc(item.event)} ${esc(item.round)}${item.heat > 1 ? ` (${item.heat}ヒート)` : ""}</span>`;
+    }
+    const recallLine = recallText ? `<div class="row-recall">勝ち上がり: ${esc(recallText)}</div>` : "";
+
+    const statusHtml = `
+      ${rstate === "current" ? `<span class="badge-now">進行中</span>` : ""}
+      ${rstate === "done" ? `<span class="badge-done">終了</span>` : ""}
+      ${entries ? `<button class="expand-btn" onclick="event.stopPropagation(); toggleRow(${item.no})">${isExpanded ? "背番号 ▲" : "背番号 ▼"}</button>` : ""}`;
+
+    const advancedSet = new Set(parseRecallTokens(recallText));
+    const chipsHtml = (isExpanded && entries) ? `
+      <div class="bib-chip-row">
+        ${entries.map(e => `<span class="bib-chip ${advancedSet.has(e.bib) ? "advanced" : ""}">${esc(e.bib)}</span>`).join("")}
+      </div>` : "";
+
+    return `
+      <div class="${rowClasses}" style="border-left:4px solid ${TONE_COLOR[tone]}" onclick="jumpTo(${idx})">
+        <div class="row-no">${item.no}</div>
+        <div class="row-time">${esc(item.time)}</div>
+        <div class="row-body">${bodyHtml}${recallLine}</div>
+        <div class="row-status">${statusHtml}</div>
+      </div>
+      ${chipsHtml}`;
+  }).join("");
+
+  const setupNotice = !GAS_ENDPOINT.startsWith("https://script.google.com/macros/") ? `
+    <div class="setup-notice">⚠ GAS_ENDPOINT が未設定です。コード上部の GAS_ENDPOINT に、デプロイしたGoogle Apps ScriptのウェブアプリURLを貼り付けてください。</div>` : "";
+
+  document.getElementById("app").innerHTML = `
+    <header>
+      <div class="header-top">
+        <div>
+          <div class="eyebrow">PROGRESS BOARD</div>
+          <h1>2026 前期中部日本ダンス選手権</h1>
+          <div class="subtitle">併催：2026 中部ダンスフェスティバル in 名古屋</div>
+        </div>
+        <div class="mode-toggle">${modeToggleHtml}</div>
+      </div>
+      ${setupNotice}
+      ${pinHtml}
+      <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
+      <div class="progress-label">NO.${current.no} / ${ITEMS.length}　${progressPct}%</div>
+    </header>
+
+    ${renderNowCard(current)}
+    ${nextHtml}
+    ${controlsHtml}
+    ${recallEntryHtml}
+
+    <div class="list-wrap">${rowsHtml}</div>
+
+    <footer>
+      ${state.loadError ? `<span class="err">⚠ 読み込みに失敗しました　</span>` : ""}
+      ${state.saveError ? `<span class="err">⚠ 保存に失敗しました　</span>` : ""}
+      ${state.updatedAt ? `最終更新 ${new Date(state.updatedAt).toLocaleTimeString("ja-JP")}` : "同期待機中"}　
+      ${state.mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
+    </footer>`;
+
+  // スクロール位置を現在の行に合わせる
+  const listWrap = document.querySelector(".list-wrap");
+  const currentRow = document.querySelector(".row.current");
+  if (listWrap && currentRow) {
+    const wrapRect = listWrap.getBoundingClientRect();
+    const rowRect = currentRow.getBoundingClientRect();
+    if (rowRect.top < wrapRect.top || rowRect.bottom > wrapRect.bottom) {
+      listWrap.scrollTop += (rowRect.top - wrapRect.top) - (wrapRect.height / 2);
+    }
+  }
+}
+
+/* ============ 起動 ============ */
+render();
+fetchState();
+setInterval(fetchState, POLL_MS);
+</script>
+</body>
+</html>
