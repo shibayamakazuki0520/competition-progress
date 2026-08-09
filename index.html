@@ -6,18 +6,20 @@
 <title>2026 前期中部日本ダンス選手権 - 進行状況</title>
 <style>
   :root {
-    --bg: #171b26;
-    --panel: #1f2537;
-    --panel2: #1a2030;
-    --border: #2a3145;
-    --text: #eae6da;
-    --text-dim: #8b93a8;
-    --text-dim2: #5a6e94;
-    --gold: #c9a227;
-    --gold2: #e0bb4a;
-    --ballroom: #2c4a73;
-    --latin: #a8362b;
-    --red: #d9694f;
+    --bg: #f4f4f2;
+    --panel: #ffffff;
+    --panel2: #eeeeec;
+    --border: #dcdcd8;
+    --text: #111111;
+    --text-dim: #666666;
+    --text-dim2: #999999;
+    --ink: #111111;
+    --accent: #ff5a4e;
+    --accent2: #ff5a4e;
+    --on-accent: #ffffff;
+    --ballroom: #2c3e50;
+    --latin: #7a1f18;
+    --red: #c0392b;
   }
   * { box-sizing: border-box; }
   body {
@@ -29,62 +31,62 @@
     padding-bottom: 24px;
   }
   ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-thumb { background: #3a4256; border-radius: 4px; }
-  input:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
+  ::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 4px; }
+  input:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 
   header {
     padding: 20px 18px 14px;
-    background: linear-gradient(180deg, #1d2333 0%, #171b26 100%);
+    background: #ffffff;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 10;
   }
   .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-  .eyebrow { font-size: 11px; letter-spacing: .14em; color: var(--gold); font-weight: 700; margin-bottom: 4px; }
-  h1 { font-size: 19px; font-weight: 700; margin: 0; color: #f4f1ea; }
+  .eyebrow { font-size: 11px; letter-spacing: .14em; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  h1 { font-size: 19px; font-weight: 700; margin: 0; color: var(--ink); }
   .subtitle { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 
-  .mode-toggle { display: flex; gap: 6px; background: #11141d; padding: 4px; border-radius: 10px; }
+  .mode-toggle { display: flex; gap: 6px; background: var(--ink); padding: 4px; border-radius: 10px; }
   .mode-btn {
     display: flex; align-items: center; border: none; background: transparent;
-    color: var(--text-dim); font-size: 12px; font-weight: 600; padding: 7px 10px;
+    color: #bbbbbb; font-size: 12px; font-weight: 600; padding: 7px 10px;
     border-radius: 7px; cursor: pointer;
   }
-  .mode-btn.active { background: var(--ballroom); color: #fff; }
+  .mode-btn.active { background: var(--accent); color: var(--on-accent); }
   .viewer-only-tag { display: flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--text-dim); padding: 7px 10px; }
 
   .setup-notice {
-    margin-top: 12px; font-size: 11px; line-height: 1.6; color: #f4d58d;
-    background: #3a2f14; border: 1px solid #6b5420; border-radius: 8px; padding: 8px 10px;
+    margin-top: 12px; font-size: 11px; line-height: 1.6; color: #7a3b1a;
+    background: #fde6d8; border: 1px solid #f2b98e; border-radius: 8px; padding: 8px 10px;
   }
 
-  .progress-track { margin-top: 14px; height: 6px; background: #262c3d; border-radius: 3px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); transition: width .4s ease; }
+  .progress-track { margin-top: 14px; height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); transition: width .4s ease; }
   .progress-label { margin-top: 6px; font-size: 11px; color: var(--text-dim); letter-spacing: .04em; }
 
   .now-card {
     margin: 16px 16px 0; background: var(--panel); border-radius: 14px; border-left: 6px solid;
-    padding: 16px 18px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    padding: 16px 18px; box-shadow: 0 6px 18px rgba(0,0,0,.06);
   }
-  .now-label { font-size: 10px; letter-spacing: .2em; color: var(--gold); font-weight: 800; margin-bottom: 8px; }
-  .now-special { font-size: 18px; font-weight: 700; color: #f4f1ea; line-height: 1.4; }
+  .now-label { font-size: 10px; letter-spacing: .2em; color: var(--accent); font-weight: 800; margin-bottom: 8px; }
+  .now-special { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.4; }
   .now-main-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .now-section { font-size: 15px; font-weight: 700; color: #f4f1ea; }
-  .now-class { font-size: 14px; color: #c9cfdd; }
+  .now-section { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .now-class { font-size: 14px; color: var(--text-dim); }
   .now-event-row { margin-top: 4px; display: flex; align-items: baseline; gap: 10px; }
-  .now-event { font-size: 26px; font-weight: 800; letter-spacing: .02em; color: #f4f1ea; }
-  .now-round { font-size: 14px; color: var(--gold2); font-weight: 700; }
+  .now-event { font-size: 26px; font-weight: 800; letter-spacing: .02em; color: var(--ink); }
+  .now-round { font-size: 14px; color: var(--accent); font-weight: 700; }
   .now-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .meta-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; background: var(--bg); color: #b7bdcc; padding: 5px 10px; border-radius: 20px; }
-  .up-banner { margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--bg); background: var(--gold2); display: inline-block; padding: 4px 10px; border-radius: 20px; }
-  .recall-banner { margin-top: 12px; background: var(--gold2); border-radius: 10px; padding: 8px 12px; }
-  .recall-label { font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #5c4a0e; }
-  .recall-numbers { font-size: 16px; font-weight: 800; color: var(--bg); margin-top: 2px; letter-spacing: .02em; }
+  .meta-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; background: var(--panel2); color: var(--text-dim); padding: 5px 10px; border-radius: 20px; }
+  .up-banner { margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--on-accent); background: var(--accent); display: inline-block; padding: 4px 10px; border-radius: 20px; }
+  .recall-banner { margin-top: 12px; background: var(--accent); border-radius: 10px; padding: 8px 12px; }
+  .recall-label { font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #ffe0dc; }
+  .recall-numbers { font-size: 16px; font-weight: 800; color: var(--on-accent); margin-top: 2px; letter-spacing: .02em; }
 
   .next-strip { margin: 10px 16px 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); padding: 8px 14px; background: var(--panel2); border-radius: 10px; }
   .next-label { font-weight: 800; color: var(--text-dim2); letter-spacing: .1em; font-size: 10px; }
-  .next-text { color: #c9cfdd; }
+  .next-text { color: var(--text); }
 
   .controls { display: flex; gap: 8px; margin: 14px 16px 0; }
   .ctrl-btn {
@@ -93,7 +95,7 @@
     font-size: 14px; font-weight: 700; padding: 12px 10px; border-radius: 10px; cursor: pointer;
   }
   .ctrl-btn:disabled { opacity: .4; cursor: default; }
-  .ctrl-primary { background: var(--gold); color: var(--bg); border: none; }
+  .ctrl-primary { background: var(--accent); color: var(--on-accent); border: none; }
   .ctrl-ghost { flex: 0 0 auto; padding: 12px 14px; color: var(--text-dim); }
 
   .recall-entry { margin: 10px 16px 0; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
@@ -101,35 +103,39 @@
   .recall-entry-row { display: flex; gap: 8px; }
   .recall-input {
     flex: 1; font-size: 14px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--bg); color: #f4f1ea; outline: none;
+    background: var(--bg); color: var(--text); outline: none;
   }
 
   .list-wrap { margin: 16px 12px 0; max-height: 52vh; overflow-y: auto; border-radius: 12px; background: var(--panel2); }
-  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #232a3c; font-size: 13px; cursor: default; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: default; }
   .row.clickable { cursor: pointer; }
-  .row-recall-entry { padding: 10px 12px 12px 46px; background: var(--bg); border-bottom: 1px solid #232a3c; }
-  .row.current { background: #26314a; }
-  .row.done { opacity: .45; }
+  .row-recall-entry { padding: 10px 12px 12px 46px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  .row.current { background: #ffe1dd; }
+  .row.done { opacity: .5; }
   .row-no { width: 22px; font-size: 11px; color: var(--text-dim2); font-weight: 700; flex-shrink: 0; }
   .row-time { width: 44px; font-size: 12px; color: var(--text-dim); flex-shrink: 0; }
-  .row-body { flex: 1; color: #dfe3ec; line-height: 1.35; }
-  .row-special { color: #b7bdcc; font-style: italic; }
-  .row-recall { font-size: 11px; color: var(--gold2); margin-top: 2px; }
+  .row-body { flex: 1; color: var(--text); line-height: 1.35; }
+  .row-special { color: var(--text-dim); font-style: italic; }
+  .row-recall { font-size: 11px; color: var(--accent); margin-top: 2px; font-weight: 600; }
   .row-status { flex-shrink: 0; text-align: right; }
-  .badge-now { font-size: 10px; font-weight: 800; background: var(--gold2); color: var(--bg); padding: 3px 8px; border-radius: 12px; }
+  .badge-now { font-size: 10px; font-weight: 800; background: var(--accent); color: var(--on-accent); padding: 3px 8px; border-radius: 12px; }
   .badge-done { font-size: 10px; color: var(--text-dim2); }
   .expand-btn { display: block; margin-top: 4px; font-size: 10px; color: var(--text-dim2); background: transparent; border: none; padding: 0; cursor: pointer; }
-  .bib-chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 12px 46px; background: var(--bg); border-bottom: 1px solid #232a3c; }
-  .bib-chip { font-size: 11px; font-weight: 700; color: #c9cfdd; background: #242b3d; padding: 3px 9px; border-radius: 12px; }
-  .bib-chip.advanced { color: var(--bg); background: var(--gold2); font-weight: 800; }
+  .bib-chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 12px 46px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  .bib-chip { font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--panel2); padding: 3px 9px; border-radius: 12px; }
+  .bib-chip.advanced { color: var(--on-accent); background: var(--accent); font-weight: 800; }
 
   footer { text-align: center; font-size: 11px; color: var(--text-dim2); margin-top: 14px; }
   footer .err { color: var(--red); font-weight: 700; }
 
-  .pin-overlay { position: fixed; inset: 0; background: rgba(10,12,18,.72); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
-  .pin-card { width: 100%; max-width: 280px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 12px 32px rgba(0,0,0,.4); }
-  .pin-title { font-size: 13px; font-weight: 700; color: #c9cfdd; margin-bottom: 10px; }
-  .pin-input { width: 100%; font-size: 20px; letter-spacing: .3em; text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: #f4f1ea; outline: none; }
+  .nexus-credit { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .nexus-word { font-size: 10px; letter-spacing: .1em; font-weight: 700; color: var(--ink); }
+  .nexus-tagline { display: block; font-size: 9px; letter-spacing: .03em; color: var(--text-dim2); margin-top: 1px; }
+
+  .pin-overlay { position: fixed; inset: 0; background: rgba(17,17,17,.55); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .pin-card { width: 100%; max-width: 280px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 12px 32px rgba(0,0,0,.2); }
+  .pin-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .pin-input { width: 100%; font-size: 20px; letter-spacing: .3em; text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; }
   .pin-error { font-size: 11px; color: var(--red); margin-top: 6px; }
   .pin-btn-row { display: flex; gap: 8px; margin-top: 14px; }
 
@@ -330,7 +336,7 @@ function sectionTone(section) {
   if (section === "show") return "show";
   return "neutral";
 }
-const TONE_COLOR = { latin: "#a8362b", ballroom: "#2c4a73", break: "#5a5a52", ceremony: "#b8901f", show: "#8a5fae", neutral: "#7a7a72" };
+const TONE_COLOR = { latin: "#7a1f18", ballroom: "#2c3e50", break: "#bbbbbb", ceremony: "#8a6d1f", show: "#5a4a8a", neutral: "#999999" };
 
 /* ============ ネットワーク ============ */
 async function fetchSharedState() {
@@ -531,9 +537,9 @@ function renderNowCard(current) {
   const currentRecall = state.recalls[noKey];
   let banner = "";
   if (currentRecall) {
-    banner = `<div class="recall-banner"><div class="recall-label">勝ち上がり</div><div class="recall-numbers">${esc(currentRecall)}</div></div>`;
+    banner = `<div class="recall-banner"><div class="recall-label">UP</div><div class="recall-numbers">${esc(currentRecall)}</div></div>`;
   } else if (current.up != null && current.up > 0) {
-    banner = `<div class="up-banner">勝ち上がり ${current.up}組(背番号未入力)</div>`;
+    banner = `<div class="up-banner">UP ${current.up}組(背番号未入力)</div>`;
   }
   let body;
   if (isSpecial(current.section)) {
@@ -589,7 +595,7 @@ function render() {
 
   const recallEntryHtml = (state.mode === "staff" && !isSpecial(current.section) && current.up != null && current.up > 0) ? `
     <div class="recall-entry">
-      <div class="recall-entry-label">勝ち上がり背番号を入力(カンマ区切り)</div>
+      <div class="recall-entry-label">UP背番号を入力(カンマ区切り)</div>
       <div class="recall-entry-row">
         <input class="recall-input" type="text" value="${esc(state.recallDraft)}"
           oninput="onRecallDraftChange(this.value)" onkeydown="if(event.key==='Enter') saveRecall()" onblur="onFieldBlur()" placeholder="例: 12, 15, 22, 30" />
@@ -617,7 +623,7 @@ function render() {
     } else {
       bodyHtml = `<span><strong>${esc(item.section)}</strong> ${esc(item.cls)} ${esc(item.event)} ${esc(item.round)}${item.heat > 1 ? ` (${item.heat}ヒート)` : ""}</span>`;
     }
-    const recallLine = recallText ? `<div class="row-recall">勝ち上がり: ${esc(recallText)}</div>` : "";
+    const recallLine = recallText ? `<div class="row-recall">UP: ${esc(recallText)}</div>` : "";
 
     const statusHtml = `
       ${rstate === "current" ? `<span class="badge-now">進行中</span>` : ""}
@@ -631,7 +637,7 @@ function render() {
       </div>
       ${(state.mode === "staff" && item.up != null && item.up > 0) ? `
       <div class="row-recall-entry">
-        <div class="recall-entry-label">この行の勝ち上がり背番号(進行には触れません)</div>
+        <div class="recall-entry-label">この行のUP背番号(進行には触れません)</div>
         <div class="recall-entry-row">
           <input class="recall-input row-recall-input" type="text" data-no="${item.no}" value="${esc(state.rowRecallDrafts[item.no] ?? (recallText || ""))}"
             oninput="onRowRecallDraftChange(${item.no}, this.value)" onkeydown="if(event.key==='Enter') saveRowRecall(${item.no})" onblur="onFieldBlur()" placeholder="例: 12, 15, 22, 30" />
@@ -680,7 +686,22 @@ function render() {
       ${state.saveError ? `<span class="err">⚠ 保存に失敗しました　</span>` : ""}
       ${state.updatedAt ? `最終更新 ${new Date(state.updatedAt).toLocaleTimeString("ja-JP")}` : "同期待機中"}　
       ${state.mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
-    </footer>`;
+    </footer>
+
+    <div class="nexus-credit">
+      <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
+        <path d="M20 3 L34 20 L20 37 L6 20 Z" stroke="#ff5a4e" stroke-width="1.6"/>
+        <circle cx="20" cy="20" r="3" fill="#ff5a4e"/>
+        <circle cx="20" cy="9" r="2" fill="#999999"/><circle cx="29" cy="20" r="2" fill="#999999"/>
+        <circle cx="20" cy="31" r="2" fill="#999999"/><circle cx="11" cy="20" r="2" fill="#999999"/>
+        <line x1="20" y1="20" x2="20" y2="9" stroke="#999999"/><line x1="20" y1="20" x2="29" y2="20" stroke="#999999"/>
+        <line x1="20" y1="20" x2="20" y2="31" stroke="#999999"/><line x1="20" y1="20" x2="11" y2="20" stroke="#999999"/>
+      </svg>
+      <span>
+        <span class="nexus-word">Created by NEXUS ENTERTAINMENT</span>
+        <span class="nexus-tagline">進行も、演出も。窓口はひとつに。</span>
+      </span>
+    </div>`;
 
   // スクロール位置を現在の行に合わせる(進行が実際に変わった時だけ)
   if (state.currentIdx !== lastScrolledIdx) {
