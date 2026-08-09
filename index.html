@@ -381,6 +381,9 @@ function icon(name, size) {
 }
 
 /* ============ 通信ロジック ============ */
+let lastLocalWriteAt = 0;
+const WRITE_GRACE_MS = 6000; // 自分の書き込み直後は、追いついていないpollの結果を無視する
+
 function isUserEditing() {
   const el = document.activeElement;
   return !!(el && (el.classList.contains("recall-input") || el.classList.contains("pin-input")));
@@ -389,6 +392,14 @@ function isUserEditing() {
 async function fetchState() {
   try {
     const parsed = await fetchSharedState();
+
+    // 自分がついさっき書き込んだ直後は、サーバー側の反映が追いついていない
+    // 古いデータで巻き戻ってしまうことがあるため、少しの間はpollの結果を無視する
+    if (Date.now() - lastLocalWriteAt < WRITE_GRACE_MS) {
+      state.loaded = true;
+      return;
+    }
+
     const nextIdx = parsed.currentIdx ?? 0;
     const nextUpdatedAt = parsed.updatedAt ?? null;
     const nextRecalls = parsed.recalls ?? {};
@@ -424,7 +435,9 @@ async function pushState(idx, recallMap) {
   const ts = new Date().toISOString();
   state.currentIdx = idx;
   state.updatedAt = ts;
+  lastLocalWriteAt = Date.now();
   render();
+  const hadError = state.saveError;
   try {
     await pushSharedState({ currentIdx: idx, updatedAt: ts, recalls: recallMap });
     state.saveError = false;
@@ -432,7 +445,8 @@ async function pushState(idx, recallMap) {
     console.error("保存に失敗しました", e);
     state.saveError = true;
   }
-  render();
+  // 見た目に変化がある時(エラー状態が変わった時)だけ再描画する
+  if (state.saveError !== hadError) render();
 }
 
 function saveRecall() {
