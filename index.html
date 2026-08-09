@@ -106,7 +106,8 @@
 
   .list-wrap { margin: 16px 12px 0; max-height: 52vh; overflow-y: auto; border-radius: 12px; background: var(--panel2); }
   .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #232a3c; font-size: 13px; cursor: default; }
-  .row.staff-clickable { cursor: pointer; }
+  .row.clickable { cursor: pointer; }
+  .row-recall-entry { padding: 10px 12px 12px 46px; background: var(--bg); border-bottom: 1px solid #232a3c; }
   .row.current { background: #26314a; }
   .row.done { opacity: .45; }
   .row-no { width: 22px; font-size: 11px; color: var(--text-dim2); font-weight: 700; flex-shrink: 0; }
@@ -359,6 +360,8 @@ const state = {
   loadError: false,
   expandedRows: new Set(),
   pendingRender: false,
+  rowRecallDrafts: {},
+  rowRecallSavedNo: null,
   viewerOnlyLink: (() => {
     try { return new URLSearchParams(location.search).get("mode") === "viewer"; }
     catch (e) { return false; }
@@ -460,10 +463,39 @@ function saveRecall() {
   pushState(state.currentIdx, nextRecalls);
 }
 
+async function pushRecalls(nextRecalls) {
+  const ts = new Date().toISOString();
+  state.recalls = nextRecalls;
+  state.updatedAt = ts;
+  lastLocalWriteAt = Date.now();
+  const hadError = state.saveError;
+  try {
+    await pushSharedState({ currentIdx: state.currentIdx, updatedAt: ts, recalls: nextRecalls });
+    state.saveError = false;
+  } catch (e) {
+    console.error("保存に失敗しました", e);
+    state.saveError = true;
+  }
+  if (state.saveError !== hadError) render();
+}
+
+function onRowRecallDraftChange(no, value) {
+  state.rowRecallDrafts[no] = value;
+}
+
+function saveRowRecall(no) {
+  // 進行位置(currentIdx)には一切触れず、その行の勝ち上がりだけを更新する
+  const value = (state.rowRecallDrafts[no] ?? "").trim();
+  const nextRecalls = { ...state.recalls, [String(no)]: value };
+  state.rowRecallSavedNo = no;
+  render();
+  setTimeout(() => { state.rowRecallSavedNo = null; render(); }, 1500);
+  pushRecalls(nextRecalls);
+}
+
 function goNext() { if (state.currentIdx < ITEMS.length - 1) pushState(state.currentIdx + 1); }
 function goPrev() { if (state.currentIdx > 0) pushState(state.currentIdx - 1); }
 function resetAll() { pushState(0); }
-function jumpTo(idx) { if (state.mode === "staff") pushState(idx); }
 function toggleRow(no) {
   if (state.expandedRows.has(no)) state.expandedRows.delete(no); else state.expandedRows.add(no);
   render();
@@ -577,7 +609,7 @@ function render() {
     const entries = entriesForItem(item);
     const isExpanded = state.expandedRows.has(item.no);
     const recallText = state.recalls[String(item.no)];
-    const rowClasses = ["row", rstate === "current" ? "current" : "", rstate === "done" ? "done" : "", state.mode === "staff" ? "staff-clickable" : ""].filter(Boolean).join(" ");
+    const rowClasses = ["row", "clickable", rstate === "current" ? "current" : "", rstate === "done" ? "done" : ""].filter(Boolean).join(" ");
 
     let bodyHtml;
     if (isSpecial(item.section)) {
@@ -596,10 +628,19 @@ function render() {
     const chipsHtml = (isExpanded && entries) ? `
       <div class="bib-chip-row">
         ${entries.map(e => `<span class="bib-chip ${advancedSet.has(e.bib) ? "advanced" : ""}">${esc(e.bib)}</span>`).join("")}
-      </div>` : "";
+      </div>
+      ${(state.mode === "staff" && item.up != null && item.up > 0) ? `
+      <div class="row-recall-entry">
+        <div class="recall-entry-label">この行の勝ち上がり背番号(進行には触れません)</div>
+        <div class="recall-entry-row">
+          <input class="recall-input row-recall-input" type="text" data-no="${item.no}" value="${esc(state.rowRecallDrafts[item.no] ?? (recallText || ""))}"
+            oninput="onRowRecallDraftChange(${item.no}, this.value)" onkeydown="if(event.key==='Enter') saveRowRecall(${item.no})" onblur="onFieldBlur()" placeholder="例: 12, 15, 22, 30" />
+          <button class="ctrl-btn ctrl-primary" style="flex:0 0 auto; padding:10px 16px;" onclick="event.stopPropagation(); saveRowRecall(${item.no})">${state.rowRecallSavedNo === item.no ? "保存済" : "保存"}</button>
+        </div>
+      </div>` : ""}` : "";
 
     return `
-      <div class="${rowClasses}" style="border-left:4px solid ${TONE_COLOR[tone]}" onclick="jumpTo(${idx})">
+      <div class="${rowClasses}" style="border-left:4px solid ${TONE_COLOR[tone]}" onclick="toggleRow(${item.no})">
         <div class="row-no">${item.no}</div>
         <div class="row-time">${esc(item.time)}</div>
         <div class="row-body">${bodyHtml}${recallLine}</div>
