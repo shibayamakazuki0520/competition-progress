@@ -358,6 +358,7 @@ const state = {
   saveError: false,
   loadError: false,
   expandedRows: new Set(),
+  pendingRender: false,
   viewerOnlyLink: (() => {
     try { return new URLSearchParams(location.search).get("mode") === "viewer"; }
     catch (e) { return false; }
@@ -380,18 +381,40 @@ function icon(name, size) {
 }
 
 /* ============ 通信ロジック ============ */
+function isUserEditing() {
+  const el = document.activeElement;
+  return !!(el && (el.classList.contains("recall-input") || el.classList.contains("pin-input")));
+}
+
 async function fetchState() {
   try {
     const parsed = await fetchSharedState();
-    state.currentIdx = parsed.currentIdx ?? 0;
-    state.updatedAt = parsed.updatedAt ?? null;
-    state.recalls = parsed.recalls ?? {};
+    const nextIdx = parsed.currentIdx ?? 0;
+    const nextUpdatedAt = parsed.updatedAt ?? null;
+    const nextRecalls = parsed.recalls ?? {};
+    const changed =
+      nextIdx !== state.currentIdx ||
+      nextUpdatedAt !== state.updatedAt ||
+      JSON.stringify(nextRecalls) !== JSON.stringify(state.recalls);
+    const hadError = state.loadError;
+
+    state.currentIdx = nextIdx;
+    state.updatedAt = nextUpdatedAt;
+    state.recalls = nextRecalls;
     state.loadError = false;
+
+    const wasFirstLoad = !state.loaded;
+    state.loaded = true;
+
+    // 変化がない時は再描画しない(スクロール位置や入力中の内容を保持するため)
+    if (!changed && !hadError && !wasFirstLoad) return;
+    if (isUserEditing()) { state.pendingRender = true; return; }
+    render();
   } catch (e) {
     console.error("読み込みに失敗しました", e);
     state.loadError = true;
-  } finally {
     state.loaded = true;
+    if (isUserEditing()) { state.pendingRender = true; return; }
     render();
   }
 }
@@ -444,6 +467,12 @@ function lockStaffMode() { state.unlocked = false; state.mode = "viewer"; render
 function setViewerMode() { state.mode = "viewer"; render(); }
 function onRecallDraftChange(v) { state.recallDraft = v; }
 function onPinChange(v) { state.pinValue = v; state.pinError = false; }
+function onFieldBlur() {
+  if (state.pendingRender) {
+    state.pendingRender = false;
+    render();
+  }
+}
 
 /* ============ 描画 ============ */
 function esc(s) {
@@ -496,7 +525,7 @@ function render() {
       <div class="pin-card">
         <div class="pin-title">運営モードの合言葉</div>
         <input class="pin-input" type="password" inputmode="numeric" autofocus value="${esc(state.pinValue)}"
-          oninput="onPinChange(this.value)" onkeydown="if(event.key==='Enter') submitPin()" placeholder="••••" />
+          oninput="onPinChange(this.value)" onkeydown="if(event.key==='Enter') submitPin()" onblur="onFieldBlur()" placeholder="••••" />
         ${state.pinError ? `<div class="pin-error">合言葉が違います</div>` : ""}
         <div class="pin-btn-row">
           <button class="ctrl-btn ctrl-ghost" onclick="state.showPinPrompt=false; render();">キャンセル</button>
@@ -517,7 +546,7 @@ function render() {
       <div class="recall-entry-label">勝ち上がり背番号を入力(カンマ区切り)</div>
       <div class="recall-entry-row">
         <input class="recall-input" type="text" value="${esc(state.recallDraft)}"
-          oninput="onRecallDraftChange(this.value)" onkeydown="if(event.key==='Enter') saveRecall()" placeholder="例: 12, 15, 22, 30" />
+          oninput="onRecallDraftChange(this.value)" onkeydown="if(event.key==='Enter') saveRecall()" onblur="onFieldBlur()" placeholder="例: 12, 15, 22, 30" />
         <button class="ctrl-btn ctrl-primary" style="flex:0 0 auto; padding:10px 16px;" onclick="saveRecall()">${state.recallSaved ? "保存済" : "表示する"}</button>
       </div>
     </div>` : "";
@@ -598,17 +627,21 @@ function render() {
       ${state.mode === "viewer" ? "· 観覧モード（自動更新）" : "· 運営モード（タップで進行を操作）"}
     </footer>`;
 
-  // スクロール位置を現在の行に合わせる
-  const listWrap = document.querySelector(".list-wrap");
-  const currentRow = document.querySelector(".row.current");
-  if (listWrap && currentRow) {
-    const wrapRect = listWrap.getBoundingClientRect();
-    const rowRect = currentRow.getBoundingClientRect();
-    if (rowRect.top < wrapRect.top || rowRect.bottom > wrapRect.bottom) {
-      listWrap.scrollTop += (rowRect.top - wrapRect.top) - (wrapRect.height / 2);
+  // スクロール位置を現在の行に合わせる(進行が実際に変わった時だけ)
+  if (state.currentIdx !== lastScrolledIdx) {
+    lastScrolledIdx = state.currentIdx;
+    const listWrap = document.querySelector(".list-wrap");
+    const currentRow = document.querySelector(".row.current");
+    if (listWrap && currentRow) {
+      const wrapRect = listWrap.getBoundingClientRect();
+      const rowRect = currentRow.getBoundingClientRect();
+      if (rowRect.top < wrapRect.top || rowRect.bottom > wrapRect.bottom) {
+        listWrap.scrollTop += (rowRect.top - wrapRect.top) - (wrapRect.height / 2);
+      }
     }
   }
 }
+let lastScrolledIdx = -1;
 
 /* ============ 起動 ============ */
 render();
