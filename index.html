@@ -109,9 +109,12 @@
 
   .now-card {
     margin: 0; background: var(--panel2); border-radius: 14px; border-left: 6px solid;
-    padding: 14px 16px; box-shadow: none;
+    padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
   }
-  .now-label { font-size: 10px; letter-spacing: .2em; color: var(--accent); font-weight: 800; margin-bottom: 8px; }
+  .now-label {
+    display: inline-block; font-size: 11px; letter-spacing: .16em; color: var(--accent); font-weight: 800;
+    background: transparent; border: 1.5px solid var(--accent); padding: 2px 10px; border-radius: 20px; margin-bottom: 10px;
+  }
   .now-special { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.4; }
   .now-main-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .now-section { font-size: 15px; font-weight: 700; color: var(--ink); }
@@ -119,13 +122,12 @@
   .now-event-row { margin-top: 4px; display: flex; align-items: baseline; gap: 10px; }
   .now-event { font-size: 26px; font-weight: 800; letter-spacing: .02em; color: var(--ink); }
   .now-round { font-size: 14px; color: var(--accent); font-weight: 700; }
-  .now-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .meta-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; background: var(--panel2); color: var(--text-dim); padding: 5px 10px; border-radius: 20px; }
-  .meta-chip.up { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .now-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  .meta-plain { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); }
+  .meta-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; background: var(--panel); color: var(--text-dim); padding: 5px 10px; border-radius: 20px; }
+  .meta-chip.up { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); color: var(--accent); font-weight: 800; }
 
-  .next-strip { margin: 10px 16px 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); padding: 8px 14px; background: var(--panel2); border-radius: 10px; }
-  .next-label { font-weight: 800; color: var(--text-dim2); letter-spacing: .1em; font-size: 10px; }
-  .next-text { color: var(--text); }
+
 
   .controls-sticky {
     position: sticky; top: calc(var(--header-h, 96px) + var(--now-h, 0px)); z-index: 9;
@@ -493,18 +495,18 @@ function renderNowCard(current) {
       <div class="now-main-row"><span class="now-section">${esc(current.section)}</span><span class="now-class">${esc(current.cls)}</span></div>
       <div class="now-event-row"><span class="now-event">${esc(current.event)}</span><span class="now-round">${esc(current.round)}</span></div>
       <div class="now-meta">
-        <span class="meta-chip">${icon("clock")} ${esc(current.time)}</span>
-        ${current.heat > 1 ? `<span class="meta-chip">ヒート ${current.heat}</span>` : ""}
-        ${current.pairs > 0 ? `<span class="meta-chip">${icon("users")} ${current.pairs}組</span>` : ""}
+        <span class="meta-plain">${icon("clock")} ${esc(current.time)}</span>
+        ${current.heat > 1 ? `<span class="meta-plain">ヒート ${current.heat}</span>` : ""}
+        ${current.pairs > 0 ? `<span class="meta-plain">${icon("users")} ${current.pairs}組</span>` : ""}
         ${current.up != null && current.up > 0 ? `<span class="meta-chip up">UP ${current.up}組</span>` : ""}
       </div>`;
   }
-  return `<section class="now-card" style="border-left-color:${TONE_COLORS()[tone]}"><div class="now-label">NOW</div>${body}</section>`;
+  const toneColor = TONE_COLORS()[tone];
+  return `<section class="now-card" style="border-left-color:${toneColor};"><div class="now-label">NOW</div>${body}</section>`;
 }
 
 function render() {
   const current = ITEMS[state.currentIdx];
-  const next = ITEMS[state.currentIdx + 1];
   const progressPct = Math.round(((state.currentIdx + 1) / ITEMS.length) * 100);
 
   let modeToggleHtml;
@@ -542,11 +544,6 @@ function render() {
       <button class="link-btn ${state.linkCopied ? "copied" : ""}" onclick="copyViewerLink()">${state.linkCopied ? "コピーしました" : "観覧用リンクをコピー"}</button>
     </div>` : "";
 
-  const nextHtml = next ? `
-    <div class="next-strip">
-      <span class="next-label">NEXT</span>
-      <span class="next-text">${esc(next.time)}　${isSpecial(next.section) ? esc(next.cls) : `${esc(next.section)} ${esc(next.cls)} ${esc(next.event)} ${esc(next.round)}`}</span>
-    </div>` : "";
 
   const sectionNames = [...new Set(ITEMS.filter(i => !isSpecial(i.section)).map(i => i.section))];
   const filterPillsHtml = `
@@ -613,7 +610,6 @@ function render() {
 
     <div class="now-sticky">${renderNowCard(current)}</div>
 
-    ${nextHtml}
     ${controlsHtml}
     ${filterPillsHtml}
 
