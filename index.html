@@ -2,24 +2,33 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>2026 前期中部日本ダンス選手権 - 進行状況</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>2026 後期中部ダンス選手権 in 名古屋 - 進行状況</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f4f2;
+    --bg: #fafafa;
     --panel: #ffffff;
-    --panel2: #eeeeec;
-    --border: #dcdcd8;
+    --panel2: #f0f0f0;
+    --border: #e2e2e2;
     --text: #111111;
     --text-dim: #666666;
     --text-dim2: #999999;
     --ink: #111111;
-    --accent: #ff5a4e;
-    --accent2: #ff5a4e;
+    --accent: #ff2d78;
+    --accent2: #ff2d78;
     --on-accent: #ffffff;
-    --ballroom: #2c3e50;
-    --latin: #7a1f18;
+    --ballroom: #3fa9f5;
+    --latin: #ff6a3d;
     --red: #c0392b;
+    --current-bg: #ffe1dd;
+    --warn-bg: #fde6d8;
+    --warn-border: #f2b98e;
+    --warn-text: #7a3b1a;
+    --ceremony: #8a6d1f;
+    --show: #5a4a8a;
   }
   * { box-sizing: border-box; }
   body {
@@ -28,37 +37,82 @@
     background: var(--bg);
     color: var(--text);
     font-family: 'Hiragino Sans', 'Yu Gothic', system-ui, -apple-system, sans-serif;
-    padding-bottom: 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 4px; }
   input:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 
   header {
-    padding: 20px 18px 14px;
-    background: #ffffff;
+    /* --collapse は 0(展開)〜1(折りたたみ) の連続値。スクロール量にそのまま連動させ、
+       しきい値やCSSトランジションを介さないことで、どんな速度のスクロールでも
+       指の動きと1:1でズレなく追従するようにしている。 */
+    padding:
+      calc(20px + env(safe-area-inset-top) - 10px * var(--collapse, 0))
+      18px
+      calc(14px - 6px * var(--collapse, 0));
+    background: var(--panel);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 10;
   }
-  .header-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-  .eyebrow { font-size: 11px; letter-spacing: .14em; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
-  h1 { font-size: 19px; font-weight: 700; margin: 0; color: var(--ink); }
-  .subtitle { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+  .header-top { display: flex; flex-direction: column; gap: 8px; }
+  .header-title-row { display: flex; flex-direction: column; }
+  .header-toggle-row { display: flex; justify-content: flex-end; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .14em; color: var(--accent); font-weight: 700;
+    overflow: hidden;
+    margin-bottom: calc(4px - 4px * var(--collapse, 0));
+    max-height: calc(18px - 18px * var(--collapse, 0));
+    opacity: calc(1 - var(--collapse, 0));
+  }
+  h1 {
+    font-size: calc(19px - 4px * var(--collapse, 0));
+    font-weight: 700; margin: 0; color: var(--ink); line-height: 1.25;
+  }
+  .subtitle {
+    font-size: 12px; color: var(--text-dim); overflow: hidden;
+    margin-top: calc(3px - 3px * var(--collapse, 0));
+    max-height: calc(18px - 18px * var(--collapse, 0));
+    opacity: calc(1 - var(--collapse, 0));
+  }
+  .progress-label {
+    font-size: 11px; color: var(--text-dim); letter-spacing: .04em; overflow: hidden;
+    margin-top: calc(6px - 6px * var(--collapse, 0));
+    max-height: calc(16px - 16px * var(--collapse, 0));
+    opacity: calc(1 - var(--collapse, 0));
+  }
 
-  .mode-toggle { display: flex; gap: 6px; background: var(--ink); padding: 4px; border-radius: 10px; }
+  .now-inline {
+    display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 800; color: var(--accent);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: calc(10px * var(--collapse, 0));
+    max-height: calc(30px * var(--collapse, 0));
+    opacity: var(--collapse, 0);
+  }
+  .now-inline .now-inline-label { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--accent); flex-shrink: 0; }
+  .now-inline .now-inline-time { color: var(--ink); font-weight: 700; flex-shrink: 0; }
+
+  .now-card-wrap {
+    overflow: hidden;
+    margin-top: calc(12px - 12px * var(--collapse, 0));
+    max-height: calc(240px - 240px * var(--collapse, 0));
+    opacity: calc(1 - var(--collapse, 0));
+  }
+
+  .mode-toggle { display: flex; gap: 4px; background: var(--ink); padding: 4px; border-radius: 10px; }
   .mode-btn {
-    display: flex; align-items: center; border: none; background: transparent;
-    color: #bbbbbb; font-size: 12px; font-weight: 600; padding: 7px 10px;
+    display: flex; align-items: center; justify-content: center; border: none; background: transparent;
+    color: #bbbbbb; padding: 8px; width: 34px; height: 34px;
     border-radius: 7px; cursor: pointer;
   }
   .mode-btn.active { background: var(--accent); color: var(--on-accent); }
   .viewer-only-tag { display: flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--text-dim); padding: 7px 10px; }
 
   .setup-notice {
-    margin-top: 12px; font-size: 11px; line-height: 1.6; color: #7a3b1a;
-    background: #fde6d8; border: 1px solid #f2b98e; border-radius: 8px; padding: 8px 10px;
+    margin-top: 12px; font-size: 11px; line-height: 1.6; color: var(--warn-text);
+    background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 8px 10px;
   }
 
   .progress-track { margin-top: 14px; height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; }
@@ -66,8 +120,8 @@
   .progress-label { margin-top: 6px; font-size: 11px; color: var(--text-dim); letter-spacing: .04em; }
 
   .now-card {
-    margin: 16px 16px 0; background: var(--panel); border-radius: 14px; border-left: 6px solid;
-    padding: 16px 18px; box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    margin: 0; background: var(--panel2); border-radius: 14px; border-left: 6px solid;
+    padding: 14px 16px; box-shadow: none;
   }
   .now-label { font-size: 10px; letter-spacing: .2em; color: var(--accent); font-weight: 800; margin-bottom: 8px; }
   .now-special { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.4; }
@@ -79,16 +133,17 @@
   .now-round { font-size: 14px; color: var(--accent); font-weight: 700; }
   .now-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
   .meta-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; background: var(--panel2); color: var(--text-dim); padding: 5px 10px; border-radius: 20px; }
-  .up-banner { margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--on-accent); background: var(--accent); display: inline-block; padding: 4px 10px; border-radius: 20px; }
-  .recall-banner { margin-top: 12px; background: var(--accent); border-radius: 10px; padding: 8px 12px; }
-  .recall-label { font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #ffe0dc; }
-  .recall-numbers { font-size: 16px; font-weight: 800; color: var(--on-accent); margin-top: 2px; letter-spacing: .02em; }
+  .meta-chip.up { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 
   .next-strip { margin: 10px 16px 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); padding: 8px 14px; background: var(--panel2); border-radius: 10px; }
   .next-label { font-weight: 800; color: var(--text-dim2); letter-spacing: .1em; font-size: 10px; }
   .next-text { color: var(--text); }
 
-  .controls { display: flex; gap: 8px; margin: 14px 16px 0; }
+  .controls-sticky {
+    position: sticky; top: var(--header-h, 96px); z-index: 9;
+    background: var(--bg); padding: 14px 16px 0;
+  }
+  .controls { display: flex; gap: 8px; }
   .ctrl-btn {
     flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
     border: 1px solid var(--border); background: var(--panel); color: var(--text);
@@ -97,40 +152,69 @@
   .ctrl-btn:disabled { opacity: .4; cursor: default; }
   .ctrl-primary { background: var(--accent); color: var(--on-accent); border: none; }
   .ctrl-ghost { flex: 0 0 auto; padding: 12px 14px; color: var(--text-dim); }
+  .ctrl-confirm { background: var(--red); color: var(--on-accent); border: none; }
 
-  .recall-entry { margin: 10px 16px 0; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-  .recall-entry-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
-  .recall-entry-row { display: flex; gap: 8px; }
-  .recall-input {
-    flex: 1; font-size: 14px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--bg); color: var(--text); outline: none;
+  .link-row { margin: 8px 16px 0; }
+  .link-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px dashed var(--border); background: transparent; color: var(--text-dim);
+    font-size: 12px; font-weight: 600; padding: 9px 10px; border-radius: 10px; cursor: pointer;
   }
+  .link-btn.copied { color: var(--accent); border-color: var(--accent); }
 
-  .list-wrap { margin: 16px 12px 0; max-height: 52vh; overflow-y: auto; border-radius: 12px; background: var(--panel2); }
-  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: default; }
-  .row.clickable { cursor: pointer; }
-  .row-recall-entry { padding: 10px 12px 12px 46px; background: var(--panel); border-bottom: 1px solid var(--border); }
-  .row.current { background: #ffe1dd; }
+  .filter-row {
+    display: flex; gap: 6px; margin: 14px 16px 0; overflow-x: auto; padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-pill {
+    flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text-dim); cursor: pointer; white-space: nowrap;
+  }
+  .filter-pill.active { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+
+  .list-wrap { margin: 12px 12px 0; border-radius: 12px; background: var(--panel2); }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; scroll-margin-top: var(--sticky-offset, 110px); }
+  .row.current { background: var(--current-bg); position: relative; }
+  .row.current::after {
+    content: "";
+    position: absolute; inset: 0; pointer-events: none;
+    box-shadow: 0 0 12px 3px color-mix(in srgb, var(--accent) 45%, transparent);
+    animation: pulse-glow 2.4s ease-in-out infinite alternate;
+  }
   .row.done { opacity: .5; }
   .row-no { width: 22px; font-size: 11px; color: var(--text-dim2); font-weight: 700; flex-shrink: 0; }
-  .row-time { width: 44px; font-size: 12px; color: var(--text-dim); flex-shrink: 0; }
-  .row-body { flex: 1; color: var(--text); line-height: 1.35; }
-  .row-special { color: var(--text-dim); font-style: italic; }
-  .row-recall { font-size: 11px; color: var(--accent); margin-top: 2px; font-weight: 600; }
+  .row-time { width: 52px; font-size: 16px; font-weight: 800; color: var(--ink); flex-shrink: 0; }
+  .row-body { flex: 1; color: var(--text); line-height: 1.4; }
+  .row-line1 { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .row-line1 .row-cls { font-weight: 500; color: var(--text-dim); margin-left: 6px; }
+  .row-line2 { margin-top: 2px; font-size: 12px; }
+  .row-line2 .row-event { font-weight: 700; color: var(--text); }
+  .row-line2 .row-round { font-weight: 600; color: var(--accent); margin-left: 6px; }
+  .row-line2 .row-heat { color: var(--text-dim2); margin-left: 4px; }
+  .row-special { color: var(--text-dim); }
   .row-status { flex-shrink: 0; text-align: right; }
   .badge-now { font-size: 10px; font-weight: 800; background: var(--accent); color: var(--on-accent); padding: 3px 8px; border-radius: 12px; }
   .badge-done { font-size: 10px; color: var(--text-dim2); }
-  .expand-btn { display: block; margin-top: 4px; font-size: 10px; color: var(--text-dim2); background: transparent; border: none; padding: 0; cursor: pointer; }
-  .bib-chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 12px 46px; background: var(--panel); border-bottom: 1px solid var(--border); }
-  .bib-chip { font-size: 11px; font-weight: 700; color: var(--text-dim); background: var(--panel2); padding: 3px 9px; border-radius: 12px; }
-  .bib-chip.advanced { color: var(--on-accent); background: var(--accent); font-weight: 800; }
 
-  footer { text-align: center; font-size: 11px; color: var(--text-dim2); margin-top: 14px; }
+  @keyframes pulse-glow {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .row.current::after { animation: none; opacity: 0; }
+  }
+
+  footer { text-align: center; font-size: 11px; color: var(--text-dim2); margin-top: 14px; padding-bottom: env(safe-area-inset-bottom); }
   footer .err { color: var(--red); font-weight: 700; }
 
-  .nexus-credit { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .nexus-word { font-size: 10px; letter-spacing: .1em; font-weight: 700; color: var(--ink); }
-  .nexus-tagline { display: block; font-size: 9px; letter-spacing: .03em; color: var(--text-dim2); margin-top: 1px; }
+  .nexus-credit { display: flex; align-items: center; justify-content: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .nexus-card {
+    display: flex; align-items: center; gap: 10px;
+    background: #12151C; border-radius: 10px; padding: 9px 16px;
+  }
+  .nexus-word { font-family: 'Shippori Mincho', Georgia, serif; font-size: 12px; font-weight: 600; letter-spacing: .05em; color: #ECE8DE; }
+  .nexus-tagline { display: block; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 8px; letter-spacing: .04em; color: #8B8F99; margin-top: 2px; }
 
   .pin-overlay { position: fixed; inset: 0; background: rgba(17,17,17,.55); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
   .pin-card { width: 100%; max-width: 280px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 12px 32px rgba(0,0,0,.2); }
@@ -147,196 +231,99 @@
 
 <script>
 /* ============ 設定 ============ */
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzUgVAbBgSZRV8bhF2IRk_Sqa1wPZIGbCqOloKwq0Kte5CHilPRnHIP25VdoL_Xn3geUA/exec";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbx_Kt-01KnPf3QfO3YJv3FRYOzOqRPV6GVCvOdXCb3fSrK2hj_6KLJnMzOgcShO5ZZt/exec"; // 例: https://script.google.com/macros/s/xxxxx/exec
 const STAFF_PIN = "2929"; // 運営モードの合言葉。必要に応じて変更してください
 const POLL_MS = 4000;
 
 /* ============ データ(スケジュール) ============ */
+// 26/9/6 JDC公認 2026 後期中部ダンス選手権 in 名古屋 進行予定表 於:岡谷鋼機名古屋公会堂 より転記
+// [no, time, code(区分), section, cls, event, round, heat, pairs, up, duration]
 const RAW = [
-  [1, "10:30", "アマ・ボールルーム", "B級", "WT", "1次予選", 3, 30, 24, "D", "0:12:00"],
-  [2, "10:42", "アマ・ボールルーム", "C級", "W", "1次予選", 2, 16, 12, "C", "0:04:30"],
-  [3, "10:46", "アマ・ボールルーム", "オープン", "WTFQ", "1次予選", 2, 15, 12, "F", "0:16:00"],
-  [4, "11:02", "アマ・ボールルーム", "D級", "F", "1次予選", 1, 9, 6, "D", "0:02:30"],
-  [5, "11:05", "アマ・ボールルーム", "B級", "WT", "2次予選", 2, 24, 12, "D", "0:08:00"],
-  [6, "11:13", "アマ・ボールルーム", "ソロダンス", "T", "1次予選", 1, 4, 4, "E", "0:02:00"],
-  [7, "11:15", "アマ・ボールルーム", "C級", "Q", "1次予選", 1, 11, 6, "D", "0:02:30"],
-  [8, "11:17", "アマ・ボールルーム", "ソロダンス", "W", "1次予選", 1, 2, 2, "E", "0:02:00"],
-  [9, "11:19", "アマ・ボールルーム", "D級", "T", "1次予選", 1, 9, 6, "C", "0:02:00"],
-  [10, "11:21", "アマ・ボールルーム", "ソロダンス", "T", "決勝", 1, 4, null, "E", "0:03:00"],
-  [11, "11:24", "アマ・ボールルーム", "C級", "W", "準決勝", 1, 12, 6, "C", "0:02:30"],
-  [12, "11:27", "アマ・ボールルーム", "ソロダンス", "W", "決勝", 1, 2, null, "E", "0:03:00"],
-  [13, "11:30", "アマ・ボールルーム", "B級", "WT", "準決勝", 1, 12, 6, "D", "0:04:00"],
-  [14, "11:34", "プロ・ラテン", "BCD級", "CP", "1次予選", 1, 1, 1, "E", "0:03:00"],
-  [15, "11:37", "アマ・ボールルーム", "オープン", "WTFQ", "準決勝", 1, 12, 6, "F", "0:09:00"],
-  [16, "11:46", "プロ・ラテン", "オープン", "CSRP", "1次予選", 1, 8, 6, "B", "0:08:00"],
-  [17, "11:54", "アマ・ボールルーム", "D級", "F", "決勝", 1, 6, null, "D", "0:03:00"],
-  [18, "11:57", "アマ・ボールルーム", "C級", "Q", "決勝", 1, 6, null, "D", "0:03:00"],
-  [19, "12:00", "break", "ブレイク", "", "", 0, 0, null, "", "0:01:00"],
-  [20, "12:01", "アマ・ボールルーム", "D級", "T", "決勝", 1, 6, null, "C", "0:03:00"],
-  [21, "12:04", "アマ・ボールルーム", "C級", "W", "決勝", 1, 6, null, "C", "0:03:00"],
-  [22, "12:07", "break", "ブレイク", "", "", 0, 0, null, "", "0:01:00"],
-  [23, "12:08", "アマ・ボールルーム", "B級", "WT", "決勝", 1, 6, null, "D", "0:04:30"],
-  [24, "12:12", "プロ・ラテン", "BCD級", "CP", "決勝", 1, 1, null, "E", "0:04:00"],
-  [25, "12:16", "アマ・ボールルーム", "オープン", "WTFQ", "決勝", 1, 6, null, "F", "0:09:30"],
-  [26, "12:26", "プロ・ラテン", "オープン", "CSRP", "決勝", 1, 6, null, "B", "0:08:30"],
-  [27, "12:34", "ceremony", "前半競技表彰式", "", "", 0, 0, null, "", "0:20:00"],
-  [28, "12:54", "break", "フロアー清掃", "", "", 0, 0, null, "", "0:03:00"],
-  [29, "12:57", "アマ・ラテン", "ソロダンス", "C", "1次予選", 1, 8, 6, "C", "0:02:00"],
-  [30, "12:59", "アマ・ラテン", "ラテンダブルス", "R", "1次予選", 1, 1, 1, "E", "0:02:00"],
-  [31, "13:01", "アマ・ラテン", "C級", "C", "1次予選", 1, 5, 5, "E", "0:02:00"],
-  [32, "13:03", "アマ・ラテン", "ソロダンス", "R", "1次予選", 1, 7, 6, "C", "0:02:00"],
-  [33, "13:05", "アマ・ラテン", "ラテンダブルス", "C", "1次予選", 1, 1, 1, "E", "0:02:00"],
-  [34, "13:07", "アマ・ラテン", "B級", "SP", "1次予選", 1, 9, 6, "C", "0:04:00"],
-  [35, "13:11", "プロ・ボールルーム", "CDN級", "WF", "1次予選", 1, 3, 3, "E", "0:03:00"],
-  [36, "13:14", "アマ・ラテン", "ソロダンス", "C", "決勝", 1, 6, null, "C", "0:03:00"],
-  [37, "13:17", "アマ・ラテン", "ラテンダブルス", "R", "決勝", 1, 1, null, "E", "0:02:30"],
-  [38, "13:20", "アマ・ラテン", "C級", "C", "決勝", 1, 5, null, "E", "0:03:00"],
-  [39, "13:23", "アマ・ラテン", "ソロダンス", "R", "決勝", 1, 6, null, "C", "0:03:00"],
-  [40, "13:26", "アマ・ラテン", "ラテンダブルス", "C", "決勝", 1, 1, null, "E", "0:02:30"],
-  [41, "13:28", "アマ・ラテン", "B級", "SP", "決勝", 1, 6, null, "C", "0:04:30"],
-  [42, "13:33", "プロ・ボールルーム", "CDN級", "WF", "決勝", 1, 3, null, "E", "0:04:30"],
-  [43, "13:37", "ceremony", "後半競技表彰式", "", "", 0, 0, null, "", "0:10:00"],
-  [44, "13:47", "show", "ワクワクダンスタイム", "", "", 0, 0, null, "", "0:25:00"],
-  [45, "14:12", "break", "フロアー清掃", "", "", 0, 0, null, "", "0:03:00"],
-  [46, "14:15", "ceremony", "主催者挨拶・審査員紹介・入場行進・トロフィー返還・実行委員長挨拶", "", "", 0, 0, null, "", "0:15:00"],
-  [47, "14:30", "シニア60・ボールルーム", "選手権", "WTF", "1次予選", 2, 21, 12, "F", "0:12:00"],
-  [48, "14:42", "プロ・ボールルーム", "選手権", "WTFQ", "1次予選", 2, 15, 12, "A", "0:16:00"],
-  [49, "14:58", "シニア60・ボールルーム", "選手権", "WTF", "準決勝", 1, 12, 6, "F", "0:07:00"],
-  [50, "15:05", "アマ・ラテン", "選手権", "CSRPJ", "1次予選", 1, 9, 6, "B", "0:11:00"],
-  [51, "15:16", "show", "プレミアムデモンストレーション", "", "", 0, 6, null, "", "0:30:00"],
-  [52, "15:46", "show", "チャリティー抽選会", "", "", 0, 0, null, "", "0:20:00"],
-  [53, "16:06", "プロ・ボールルーム", "選手権", "WTVFQ", "準決勝", 1, 12, 6, "A", "0:10:00"],
-  [54, "16:16", "show", "シニア60・ボールルーム決勝進出選手 ソロダンス", "", "", 0, 6, null, "", "0:08:00"],
-  [55, "16:24", "シニア60・ボールルーム", "選手権", "WTF", "決勝", 1, 6, null, "F", "0:07:30"],
-  [56, "16:32", "show", "アマ・ラテンアメリカン決勝進出選手 ソロダンス", "", "", 0, 6, null, "", "0:08:00"],
-  [57, "16:40", "アマ・ラテン", "選手権", "CSRPJ", "決勝", 1, 6, null, "B", "0:11:30"],
-  [58, "16:51", "show", "プロ・ボールルーム決勝進出選手 ソロダンス", "", "", 0, 6, null, "", "0:08:00"],
-  [59, "16:59", "プロ・ボールルーム", "選手権", "WTVFQ", "決勝", 1, 6, null, "A", "0:10:30"],
-  [60, "17:10", "ceremony", "ベストカップル賞・ベストクイーン賞 表彰式", "", "", 0, 0, null, "", "0:05:00"],
-  [61, "17:15", "ceremony", "オナーダンス・選手権表彰式", "", "", 0, 0, null, "", "0:25:00"],
-  [62, "17:40", "ceremony", "閉会", "", "", 0, 0, null, "", "0:00:00"],
+  [1, "10:30", "A26", "アマ・ラテン", "ソロダンス", "C", "1次予選", 1, 11, 6, "0:02:30"],
+  [2, "10:32", "A10", "アマ・ラテン", "C級", "S", "1次予選", 1, 4, 4, "0:02:00"],
+  [3, "10:34", "A22", "アマ・ラテン", "ラテンダブルス", "R", "1次予選", 1, 1, 1, "0:02:00"],
+  [4, "10:36", "A24", "アマ・ラテン", "ソロダンス", "R", "1次予選", 1, 11, 6, "0:02:30"],
+  [5, "10:39", "A14", "アマ・ラテン", "D級", "R", "1次予選", 1, 1, 1, "0:02:00"],
+  [6, "10:41", "A8", "アマ・ラテン", "C級", "C", "1次予選", 1, 5, 5, "0:02:00"],
+  [7, "10:43", "5", "プロ・ボールルーム", "CDN級", "TF", "1次予選", 1, 2, 2, "0:03:00"],
+  [8, "10:46", "A6", "アマ・ラテン", "B級", "SR", "1次予選", 1, 7, 6, "0:04:00"],
+  [9, "10:50", "3", "プロ・ボールルーム", "BCD級", "WT", "1次予選", 1, 6, 6, "0:03:00"],
+  [10, "10:53", "A2", "アマ・ラテン", "オープン", "CSRP", "1次予選", 1, 8, 6, "0:09:00"],
+  [11, "11:02", "1", "プロ・ボールルーム", "オープン", "WTFQ", "1次予選", 1, 10, 6, "0:08:00"],
+  [12, "11:10", "", "break", "フロアー清掃", "", "", 0, 0, null, "0:03:00"],
+  [13, "11:13", "A26", "アマ・ラテン", "ソロダンス", "C", "決勝", 1, 6, null, "0:03:00"],
+  [14, "11:16", "A10", "アマ・ラテン", "C級", "S", "決勝", 1, 4, null, "0:03:00"],
+  [15, "11:19", "A22", "アマ・ラテン", "ラテンダブルス", "R", "決勝", 1, 1, null, "0:02:30"],
+  [16, "11:21", "A24", "アマ・ラテン", "ソロダンス", "R", "決勝", 1, 6, null, "0:03:00"],
+  [17, "11:24", "A14", "アマ・ラテン", "D級", "R", "決勝", 1, 1, null, "0:02:30"],
+  [18, "11:27", "A8", "アマ・ラテン", "C級", "C", "決勝", 1, 5, null, "0:03:00"],
+  [19, "11:30", "5", "プロ・ボールルーム", "CDN級", "TF", "決勝", 1, 2, null, "0:04:30"],
+  [20, "11:34", "A6", "アマ・ラテン", "B級", "SR", "決勝", 1, 6, null, "0:04:30"],
+  [21, "11:39", "3", "プロ・ボールルーム", "BCD級", "WT", "決勝", 1, 6, null, "0:04:30"],
+  [22, "11:43", "A2", "アマ・ラテン", "オープン", "CSRP", "決勝", 1, 6, null, "0:09:30"],
+  [23, "11:53", "1", "プロ・ボールルーム", "オープン", "WTFQ", "決勝", 1, 6, null, "0:08:30"],
+  [24, "12:01", "", "ceremony", "前半競技表彰式", "", "", 0, 0, null, "0:15:00"],
+  [25, "12:16", "A9", "アマ・ボールルーム", "C級", "F", "1次予選", 2, 15, 12, "0:04:30"],
+  [26, "12:21", "A25", "アマ・ボールルーム", "ソロダンス", "T", "1次予選", 1, 4, 4, "0:02:00"],
+  [27, "12:23", "A7", "アマ・ボールルーム", "C級", "T", "1次予選", 2, 15, 12, "0:04:30"],
+  [28, "12:27", "", "break", "ブレイク", "", "", 0, 0, null, "0:01:00"],
+  [29, "12:28", "A5", "アマ・ボールルーム", "B級", "WF", "1次予選", 3, 28, 24, "0:12:00"],
+  [30, "12:40", "A13", "アマ・ボールルーム", "D級", "F", "1次予選", 1, 10, 6, "0:02:30"],
+  [31, "12:43", "", "break", "ブレイク", "", "", 0, 0, null, "0:01:00"],
+  [32, "12:44", "A9", "アマ・ボールルーム", "C級", "F", "準決勝", 1, 12, 6, "0:02:30"],
+  [33, "12:46", "A23", "アマ・ボールルーム", "ソロダンス", "W", "1次予選", 1, 4, 4, "0:02:00"],
+  [34, "12:48", "A5", "アマ・ボールルーム", "B級", "WF", "2次予選", 2, 24, 12, "0:08:00"],
+  [35, "12:56", "A11", "アマ・ボールルーム", "D級", "W", "1次予選", 1, 10, 6, "0:02:30"],
+  [36, "12:59", "", "break", "ブレイク", "", "", 0, 0, null, "0:01:00"],
+  [37, "13:00", "A7", "アマ・ボールルーム", "C級", "T", "準決勝", 1, 12, 6, "0:02:30"],
+  [38, "13:02", "A25", "アマ・ボールルーム", "ソロダンス", "T", "決勝", 1, 4, null, "0:03:00"],
+  [39, "13:05", "A5", "アマ・ボールルーム", "B級", "WF", "準決勝", 1, 12, 6, "0:04:00"],
+  [40, "13:09", "A13", "アマ・ボールルーム", "D級", "F", "決勝", 1, 6, null, "0:03:00"],
+  [41, "13:12", "", "break", "ブレイク", "", "", 0, 0, null, "0:01:00"],
+  [42, "13:13", "A9", "アマ・ボールルーム", "C級", "F", "決勝", 1, 6, null, "0:03:00"],
+  [43, "13:16", "", "break", "ブレイク", "", "", 0, 0, null, "0:01:00"],
+  [44, "13:17", "A11", "アマ・ボールルーム", "D級", "W", "決勝", 1, 6, null, "0:03:00"],
+  [45, "13:20", "", "break", "ブレイク", "", "", 0, 0, null, "0:01:00"],
+  [46, "13:21", "A7", "アマ・ボールルーム", "C級", "T", "決勝", 1, 6, null, "0:03:00"],
+  [47, "13:24", "A23", "アマ・ボールルーム", "ソロダンス", "W", "決勝", 1, 4, null, "0:03:00"],
+  [48, "13:27", "A5", "アマ・ボールルーム", "B級", "WF", "決勝", 1, 6, null, "0:04:30"],
+  [49, "13:32", "", "ceremony", "後半競技表彰式", "", "", 0, 0, null, "0:10:00"],
+  [50, "13:42", "", "show", "ワクワクダンスタイム", "", "", 0, 0, null, "0:20:00"],
+  [51, "14:02", "", "break", "フロアー清掃", "", "", 0, 0, null, "0:03:00"],
+  [52, "14:05", "", "ceremony", "主催者挨拶", "", "", 0, 0, null, "0:03:00"],
+  [53, "14:08", "", "ceremony", "審査員紹介・入場行進・トロフィー返還・選手宣誓・選手退場", "", "", 0, 0, null, "0:15:00"],
+  [54, "14:23", "", "ceremony", "実行委員長挨拶", "", "", 0, 0, null, "0:05:00"],
+  [55, "14:28", "A3", "シニア65・ボールルーム", "選手権", "WTF", "1次予選", 3, 29, 24, "0:18:00"],
+  [56, "14:46", "3", "show", "プレミアムデモンストレーション", "", "", 0, 0, null, "0:15:00"],
+  [57, "15:01", "A3", "シニア65・ボールルーム", "選手権", "WTF", "2次予選", 2, 24, 12, "0:12:00"],
+  [58, "15:13", "A1", "アマ・ボールルーム", "選手権", "WTFQ", "1次予選", 2, 17, 12, "0:16:00"],
+  [59, "15:29", "2", "プロ・ラテン", "選手権", "CSRP", "1次予選", 1, 10, 10, "0:06:00"],
+  [60, "15:35", "A3", "シニア65・ボールルーム", "選手権", "WTF", "準決勝", 1, 12, 6, "0:07:00"],
+  [61, "15:42", "A1", "アマ・ボールルーム", "選手権", "WTVwFQ", "準決勝", 1, 12, 6, "0:11:00"],
+  [62, "15:53", "2", "プロ・ラテン", "選手権", "CSRPJ", "準決勝", 1, 10, 6, "0:10:00"],
+  [63, "16:03", "", "show", "チャリティー抽選会", "", "", 0, 0, null, "0:20:00"],
+  [64, "16:23", "", "show", "シニア65・ボールルーム決勝進出選手 ソロダンス", "", "", 0, 0, null, "0:08:00"],
+  [65, "16:31", "A3", "シニア65・ボールルーム", "選手権", "WTF", "決勝", 1, 6, null, "0:07:30"],
+  [66, "16:38", "", "show", "アマ・ボールルーム決勝進出選手 ソロダンス", "", "", 0, 0, null, "0:08:00"],
+  [67, "16:46", "A1", "アマ・ボールルーム", "選手権", "WTVwFQ", "決勝", 1, 6, null, "0:11:30"],
+  [68, "16:58", "", "show", "プロ・ラテン決勝進出選手 ソロダンス", "", "", 0, 0, null, "0:08:00"],
+  [69, "17:06", "2", "プロ・ラテン", "選手権", "CSRPJ", "決勝", 1, 6, null, "0:10:30"],
+  [70, "17:16", "", "ceremony", "オナーダンス・選手権表彰式", "", "", 0, 0, null, "0:25:00"],
+  [71, "17:41", "", "ceremony", "閉会", "", "", 0, 0, null, "0:00:00"],
 ];
-const FIELDS = ["no","time","section","cls","event","round","heat","pairs","up","judge","duration"];
+const FIELDS = ["no","time","code","section","cls","event","round","heat","pairs","up","duration"];
 const ITEMS = RAW.map(row => Object.fromEntries(FIELDS.map((f,i) => [f, row[i]])));
 const isSpecial = section => ["break","ceremony","show"].includes(section);
 
-/* ============ データ(エントリー一覧) ============ */
-const ENTRY_GROUPS = [
-  { section: "アマ・ボールルーム", cls: "B級", event: "WT", pairs: [
-    ["有賀 義隆","国枝 敬子"],["安藤 勉","新海 典江"],["安藤 安夫","上野 清美"],["石原 逸郎","石原 恵美子"],
-    ["宇野 幸男","本田 久仁子"],["岡田 洋","岡田 みどり"],["小川 遥叶","村瀬 稚奈"],["尾﨑 直也","林 仁美"],
-    ["加藤 紀彦","太田 玲子"],["國田 慎弥","櫻井 玲奈"],["黒田 敦也","河合 琴香"],["近藤 貞司","近藤 知子"],
-    ["柴垣 宏行","福瀧 愛子"],["杉山 久八","北澤 由美子"],["鈴木 啓太","田中 清羽"],["関 守","岡谷 恵美子"],
-    ["髙橋 錦司","田原 美緒"],["塚田 淑慈","徳永 真唯"],["丹野 吉道","丹野 いづみ"],["服部 清","米津 由里"],
-    ["原田 則夫","原田 真由美"],["細井 良彦","細井 和子"],["本田 優","榊原 美加"],["前原 勝明","前原 真理子"],
-    ["松村 清孝","鈴木 久美子"],["峰 裕一","横山 七奈子"],["本倉 拓朗","宮永 安珠"],["森本 貴大","島地 由利江"],
-    ["和佐田 結樹","遠山 彩恵"],
-  ]},
-  { section: "アマ・ボールルーム", cls: "C級", event: "W", pairs: [
-    ["浅井 清史","浅井 裕子"],["伊藤 成輝","櫻井 友子"],["岩男 昭則","庄屋 貴鳳"],["岩崎 幸司","村田 愛子"],
-    ["叶 龍人","丹羽 緑"],["近藤 由秋","武生 和江"],["佐野 寛","那須 恵子"],["鈴木 真澄","山口 年枝"],
-    ["髙橋 錦司","田原 美緒"],["塚田 淑慈","徳永 真唯"],["中村 俊哉","中村 真理子"],["野々山 史男","野々山 千世代"],
-    ["原田 則夫","原田 真由美"],["平野 文美","村上 久美子"],["峰 裕一","横山 七奈子"],["森本 貴大","島地 由利江"],
-  ]},
-  { section: "アマ・ボールルーム", cls: "オープン", event: "WTFQ", pairs: [
-    ["牛田 基彦","牛田 紀世美"],["小川 遥叶","村瀬 稚奈"],["奥薗 信人","小池 理紗"],["樫原 康太","加藤 みなみ"],
-    ["加藤 大喜","小森 菜々美"],["加納 弘章","井藤 あや"],["髙橋 竜太","平良 早耶花"],["髙谷 智史","北川 明歩"],
-    ["徳良 和之","加納 羽華"],["細江 耕平","河岸 来実"],["村上 和穂","金子 真弓"],["本倉 拓朗","宮永 安珠"],
-    ["山川 太一","蒲江 里奈"],["山下 雄大","小川 美玲"],["山下 慶太郎","池田 綾香"],
-  ]},
-  { section: "アマ・ボールルーム", cls: "D級", event: "F", pairs: [
-    ["浅井 英一","戸成 佐代子"],["池田 永","池田 京子"],["井戸 博","井戸 好子"],["伊藤 勇祐","河北 直美"],
-    ["叶 龍人","丹羽 緑"],["近藤 由秋","武生 和江"],["佐野 寛","那須 恵子"],["柴田 年男","横田 絹代"],
-    ["平田 富夫","山本 宰子"],
-  ]},
-  { section: "アマ・ボールルーム", cls: "D級", event: "T", pairs: [
-    ["浅井 英一","戸成 佐代子"],["池田 永","池田 京子"],["井戸 博","井戸 好子"],["伊藤 勇祐","河北 直美"],
-    ["叶 龍人","丹羽 緑"],["近藤 由秋","武生 和江"],["佐野 寛","那須 恵子"],["柴田 年男","横田 絹代"],
-    ["平田 富夫","山本 宰子"],
-  ]},
-  { section: "アマ・ボールルーム", cls: "C級", event: "Q", pairs: [
-    ["浅井 清史","浅井 裕子"],["伊藤 成輝","櫻井 友子"],["岩男 昭則","庄屋 貴鳳"],["佐野 寛","那須 恵子"],
-    ["鈴木 真澄","山口 年枝"],["髙橋 錦司","田原 美緒"],["中村 俊哉","中村 真理子"],["野々山 史男","野々山 千世代"],
-    ["峰 裕一","横山 七奈子"],["森 正吉","尾高 妙子"],["森本 貴大","島地 由利江"],
-  ]},
-  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "T", solo: ["奥薗 信人","小池 理紗","川路 賢次","松川 稀"] },
-  { section: "アマ・ボールルーム", cls: "ソロダンス", event: "W", solo: ["川路 賢次","松川 稀"] },
-  { section: "プロ・ラテン", cls: "BCD級", event: "CP", pairs: [["小森 康裕","滝川 和美"]] },
-  { section: "プロ・ラテン", cls: "オープン", event: "CSRP", pairs: [
-    ["岩本 憲幸","稲垣 はる美"],["勝川 佳和","清水 佳奈子"],["勝野 出","浅海 愛"],["金原 亮司","永原 由貴"],
-    ["小森 康裕","滝川 和美"],["平柳 諒悟","佐田 みづほ"],["村上 知哉","村田 佳澄"],["山﨑 雅則","河内 知子"],
-  ]},
-  { section: "アマ・ラテン", cls: "ソロダンス", event: "C", solo: ["Nikita","池田 綾香","大石 彩世","小栗 沙永子","杉田 則子","辰巳 則子","日高 芽生"] },
-  { section: "アマ・ラテン", cls: "ソロダンス", event: "R", solo: ["Nikita","池田 綾香","大石 彩世","小栗 沙永子","杉田 則子","辰巳 則子"] },
-  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "R", pairs: [["松野 日向子","中村 瑠緋菜"]] },
-  { section: "アマ・ラテン", cls: "ラテンダブルス", event: "C", pairs: [["松野 日向子","中村 瑠緋菜"]] },
-  { section: "アマ・ラテン", cls: "C級", event: "C", pairs: [
-    ["髙橋 錦司","田原 美緒"],["野々山 史男","野々山 千世代"],["平野 文美","村上 久美子"],["峰 裕一","横山 七奈子"],
-    ["吉田 茂","酒井 美早子"],
-  ]},
-  { section: "アマ・ラテン", cls: "B級", event: "SP", pairs: [
-    ["岩男 昭則","庄屋 貴鳳"],["岩崎 幸司","村田 愛子"],["関 守","岡谷 恵美子"],["寺澤 光","青木 聖奈"],
-    ["戸田 光志","戸田 ひろ子"],["原田 則夫","原田 真由美"],["森 正吉","尾高 妙子"],["山本 明","山本 晴美"],
-    ["山本 立樹","山本 夕貴"],
-  ]},
-  { section: "プロ・ボールルーム", cls: "CDN級", event: "WF", pairs: [
-    ["安藤 裕一","河内 芳江"],["伊藤 圭一","廣瀬 久美"],["村上 知哉","村田 佳澄"],
-  ]},
-  { section: "シニア60・ボールルーム", cls: "選手権", event: "WTF", pairs: [
-    ["阿部 正三","阿部 里美"],["安藤 勉","新海 典江"],["安藤 安夫","上野 清美"],["石原 逸郎","石原 恵美子"],
-    ["井上 雅幹","井上 啓子"],["岡田 浩之","岡田 やす江"],["尾﨑 直也","林 仁美"],["近藤 貞司","近藤 知子"],
-    ["佐藤 寛","小西 ゆり子"],["早苗 哲也","渡辺 郁子"],["柴垣 宏行","福瀧 愛子"],["杉山 久八","北澤 由美子"],
-    ["須藤 進","小林 椿"],["関 守","岡谷 恵美子"],["戸田 光志","戸田 ひろ子"],["服部 清","米津 由里"],
-    ["早川 明彦","杉浦 節子"],["平松 成文","原 映子"],["本田 優","榊原 美加"],["村上 和穂","金子 真弓"],
-    ["吉田 茂","酒井 美早子"],
-  ]},
-  { section: "プロ・ボールルーム", cls: "選手権", event: "WTFQ", pairs: [
-    ["岩本 憲幸","稲垣 はる美"],["太田 雅士","太田 薫"],["岡 俊宏","岡 瑞紀"],["勝川 佳和","清水 佳奈子"],
-    ["勝野 出","浅海 愛"],["楠本 和嵩","加納 杏那"],["柴田 真希","柴田 綾子"],["柴山 和樹","平岩 英里"],
-    ["竹内 大祐","竹内 桃子"],["中野 雅章","中野 由美恵"],["新美 一輝","山口 ひかり"],["野田 幹也","広瀬 真名"],
-    ["村澤 俊也","鈴木 伶奈"],["森田 貴久","木全 志穂"],["山﨑 雅則","河内 知子"],
-  ]},
-  { section: "アマ・ラテン", cls: "選手権", event: "CSRPJ", pairs: [
-    ["櫻庭 幸哉","神谷 さくら"],["小栗 歩","小栗 沙永子"],["加藤 大喜","小森 菜々美"],["纈纈 大貴","篠田 雛多"],
-    ["佐々木 寛斗","加藤 紗理"],["高橋 大最","内川 摩耶"],["西松 大翔","森下 夏妃"],["室戸 啓汰","野田 麻緒"],
-    ["山下 慶太郎","池田 綾香"],
-  ]},
-];
-const normalizeEvent = event => (event === "WTVFQ" ? "WTFQ" : event);
-
-function buildParticipantIndex() {
-  const registry = new Map();
-  let nextBib = 1;
-  const groupEntries = new Map();
-  ENTRY_GROUPS.forEach(g => {
-    const entries = g.pairs ? g.pairs.map(p => p.join(" ・ ")) : g.solo;
-    const rosterEntries = [];
-    entries.forEach(name => {
-      let bib = registry.get(name);
-      if (!bib) { bib = String(nextBib++); registry.set(name, bib); }
-      rosterEntries.push({ bib, name });
-    });
-    groupEntries.set(`${g.section}|${g.cls}|${g.event}`, rosterEntries);
-  });
-  return groupEntries;
-}
-const GROUP_ENTRIES = buildParticipantIndex();
-function entriesForItem(item) {
-  if (isSpecial(item.section)) return null;
-  return GROUP_ENTRIES.get(`${item.section}|${item.cls}|${normalizeEvent(item.event)}`) || null;
-}
-function parseRecallTokens(text) {
-  return (text || "").split(/[,、\s]+/).map(t => t.trim()).filter(Boolean);
-}
 function sectionTone(section) {
   if (section.includes("ラテン")) return "latin";
   if (section.includes("ボールルーム")) return "ballroom";
-  if (section === "break") return "break";
-  if (section === "ceremony") return "ceremony";
-  if (section === "show") return "show";
-  return "neutral";
+  return "neutral"; // 休憩・表彰式・ショーなどは色分けせず、すべて同じニュートラル色にする
 }
-const TONE_COLOR = { latin: "#7a1f18", ballroom: "#2c3e50", break: "#bbbbbb", ceremony: "#8a6d1f", show: "#5a4a8a", neutral: "#999999" };
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function TONE_COLORS() {
+  return { latin: cssVar("--latin"), ballroom: cssVar("--ballroom"), neutral: cssVar("--border") };
+}
 
 /* ============ ネットワーク ============ */
 async function fetchSharedState() {
@@ -358,16 +345,13 @@ const state = {
   pinError: false,
   currentIdx: 0,
   updatedAt: null,
-  recalls: {},
-  recallDraft: "",
-  recallSaved: false,
   loaded: false,
   saveError: false,
   loadError: false,
-  expandedRows: new Set(),
   pendingRender: false,
-  rowRecallDrafts: {},
-  rowRecallSavedNo: null,
+  sectionFilter: "all",
+  confirmReset: false,
+  linkCopied: false,
   viewerOnlyLink: (() => {
     try { return new URLSearchParams(location.search).get("mode") === "viewer"; }
     catch (e) { return false; }
@@ -379,7 +363,6 @@ function icon(name, size) {
   const paths = {
     clock: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
     users: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
-    gavel: `<path d="m14.5 12.5-8 8a2.12 2.12 0 1 1-3-3l8-8"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/>`,
     eye: `<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>`,
     radio: `<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-8.49a6 6 0 0 0 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>`,
     chevleft: `<polyline points="15 18 9 12 15 6"/>`,
@@ -395,7 +378,7 @@ const WRITE_GRACE_MS = 6000; // 自分の書き込み直後は、追いついて
 
 function isUserEditing() {
   const el = document.activeElement;
-  return !!(el && (el.classList.contains("recall-input") || el.classList.contains("pin-input")));
+  return !!(el && el.classList.contains("pin-input"));
 }
 
 async function fetchState() {
@@ -411,22 +394,17 @@ async function fetchState() {
 
     const nextIdx = parsed.currentIdx ?? 0;
     const nextUpdatedAt = parsed.updatedAt ?? null;
-    const nextRecalls = parsed.recalls ?? {};
-    const changed =
-      nextIdx !== state.currentIdx ||
-      nextUpdatedAt !== state.updatedAt ||
-      JSON.stringify(nextRecalls) !== JSON.stringify(state.recalls);
+    const changed = nextIdx !== state.currentIdx || nextUpdatedAt !== state.updatedAt;
     const hadError = state.loadError;
 
     state.currentIdx = nextIdx;
     state.updatedAt = nextUpdatedAt;
-    state.recalls = nextRecalls;
     state.loadError = false;
 
     const wasFirstLoad = !state.loaded;
     state.loaded = true;
 
-    // 変化がない時は再描画しない(スクロール位置や入力中の内容を保持するため)
+    // 変化がない時は再描画しない(スクロール位置を保持するため)
     if (!changed && !hadError && !wasFirstLoad) return;
     if (isUserEditing()) { state.pendingRender = true; return; }
     render();
@@ -439,16 +417,16 @@ async function fetchState() {
   }
 }
 
-async function pushState(idx, recallMap) {
-  recallMap = recallMap || state.recalls;
+async function pushState(idx) {
   const ts = new Date().toISOString();
   state.currentIdx = idx;
   state.updatedAt = ts;
   lastLocalWriteAt = Date.now();
+  forceScrollNext = true; // 運営が自分でボタンを押した時は、直前の手動スクロールに関係なく必ず追従する
   render();
   const hadError = state.saveError;
   try {
-    await pushSharedState({ currentIdx: idx, updatedAt: ts, recalls: recallMap });
+    await pushSharedState({ currentIdx: idx, updatedAt: ts });
     state.saveError = false;
   } catch (e) {
     console.error("保存に失敗しました", e);
@@ -458,53 +436,36 @@ async function pushState(idx, recallMap) {
   if (state.saveError !== hadError) render();
 }
 
-function saveRecall() {
-  const noKey = String(ITEMS[state.currentIdx].no);
-  const nextRecalls = { ...state.recalls, [noKey]: state.recallDraft.trim() };
-  state.recalls = nextRecalls;
-  state.recallSaved = true;
-  state.expandedRows.add(ITEMS[state.currentIdx].no);
-  render();
-  setTimeout(() => { state.recallSaved = false; render(); }, 1500);
-  pushState(state.currentIdx, nextRecalls);
-}
-
-async function pushRecalls(nextRecalls) {
-  const ts = new Date().toISOString();
-  state.recalls = nextRecalls;
-  state.updatedAt = ts;
-  lastLocalWriteAt = Date.now();
-  const hadError = state.saveError;
-  try {
-    await pushSharedState({ currentIdx: state.currentIdx, updatedAt: ts, recalls: nextRecalls });
-    state.saveError = false;
-  } catch (e) {
-    console.error("保存に失敗しました", e);
-    state.saveError = true;
-  }
-  if (state.saveError !== hadError) render();
-}
-
-function onRowRecallDraftChange(no, value) {
-  state.rowRecallDrafts[no] = value;
-}
-
-function saveRowRecall(no) {
-  // 進行位置(currentIdx)には一切触れず、その行の勝ち上がりだけを更新する
-  const value = (state.rowRecallDrafts[no] ?? "").trim();
-  const nextRecalls = { ...state.recalls, [String(no)]: value };
-  state.rowRecallSavedNo = no;
-  render();
-  setTimeout(() => { state.rowRecallSavedNo = null; render(); }, 1500);
-  pushRecalls(nextRecalls);
-}
-
 function goNext() { if (state.currentIdx < ITEMS.length - 1) pushState(state.currentIdx + 1); }
 function goPrev() { if (state.currentIdx > 0) pushState(state.currentIdx - 1); }
-function resetAll() { pushState(0); }
-function toggleRow(no) {
-  if (state.expandedRows.has(no)) state.expandedRows.delete(no); else state.expandedRows.add(no);
-  render();
+let resetConfirmTimer = null;
+function resetAll() {
+  if (!state.confirmReset) {
+    // 1回目のタップ:誤操作防止のため、すぐには実行せず確認状態にする
+    state.confirmReset = true;
+    render();
+    clearTimeout(resetConfirmTimer);
+    resetConfirmTimer = setTimeout(() => { state.confirmReset = false; render(); }, 3000);
+    return;
+  }
+  // 2回目のタップ(3秒以内)で実際に最初へ戻す
+  clearTimeout(resetConfirmTimer);
+  state.confirmReset = false;
+  pushState(0);
+}
+function setSectionFilter(name) { state.sectionFilter = name; render(); }
+function copyViewerLink() {
+  const url = location.origin + location.pathname + "?mode=viewer";
+  const done = () => {
+    state.linkCopied = true;
+    render();
+    setTimeout(() => { state.linkCopied = false; render(); }, 2000);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => { prompt("このURLをコピーしてください", url); });
+  } else {
+    prompt("このURLをコピーしてください", url);
+  }
 }
 function requestStaffMode() {
   if (state.unlocked) { state.mode = "staff"; render(); return; }
@@ -517,7 +478,6 @@ function submitPin() {
 }
 function lockStaffMode() { state.unlocked = false; state.mode = "viewer"; render(); }
 function setViewerMode() { state.mode = "viewer"; render(); }
-function onRecallDraftChange(v) { state.recallDraft = v; }
 function onPinChange(v) { state.pinValue = v; state.pinError = false; }
 function onFieldBlur() {
   if (state.pendingRender) {
@@ -533,14 +493,6 @@ function esc(s) {
 
 function renderNowCard(current) {
   const tone = sectionTone(current.section);
-  const noKey = String(current.no);
-  const currentRecall = state.recalls[noKey];
-  let banner = "";
-  if (currentRecall) {
-    banner = `<div class="recall-banner"><div class="recall-label">UP</div><div class="recall-numbers">${esc(currentRecall)}</div></div>`;
-  } else if (current.up != null && current.up > 0) {
-    banner = `<div class="up-banner">UP ${current.up}組(背番号未入力)</div>`;
-  }
   let body;
   if (isSpecial(current.section)) {
     body = `<div class="now-special">${esc(current.cls)}</div>`;
@@ -550,12 +502,19 @@ function renderNowCard(current) {
       <div class="now-event-row"><span class="now-event">${esc(current.event)}</span><span class="now-round">${esc(current.round)}</span></div>
       <div class="now-meta">
         <span class="meta-chip">${icon("clock")} ${esc(current.time)}</span>
-        ${current.heat > 0 ? `<span class="meta-chip">ヒート ${current.heat}</span>` : ""}
+        ${current.heat > 1 ? `<span class="meta-chip">ヒート ${current.heat}</span>` : ""}
         ${current.pairs > 0 ? `<span class="meta-chip">${icon("users")} ${current.pairs}組</span>` : ""}
-        ${current.judge ? `<span class="meta-chip">${icon("gavel")} 主任 ${esc(current.judge)}</span>` : ""}
+        ${current.up != null && current.up > 0 ? `<span class="meta-chip up">UP ${current.up}組</span>` : ""}
       </div>`;
   }
-  return `<section class="now-card" style="border-left-color:${TONE_COLOR[tone]}"><div class="now-label">NOW</div>${body}${banner}</section>`;
+  return `<section class="now-card" style="border-left-color:${TONE_COLORS()[tone]}"><div class="now-label">NOW</div>${body}</section>`;
+}
+
+function renderNowInline(current) {
+  if (isSpecial(current.section)) {
+    return `<span class="now-inline-label">NOW</span><span class="now-inline-time">${esc(current.time)}</span><span>${esc(current.cls)}</span>`;
+  }
+  return `<span class="now-inline-label">NOW</span><span class="now-inline-time">${esc(current.time)}</span><span>${esc(current.section)} ${esc(current.cls)} ${esc(current.event)} ${esc(current.round)}</span>`;
 }
 
 function render() {
@@ -568,8 +527,8 @@ function render() {
     modeToggleHtml = `<span class="viewer-only-tag">${icon("eye")} 観覧用</span>`;
   } else {
     modeToggleHtml = `
-      <button class="mode-btn ${state.mode === "viewer" ? "active" : ""}" onclick="setViewerMode()">${icon("eye")} 観覧</button>
-      <button class="mode-btn ${state.mode === "staff" ? "active" : ""}" onclick="${state.mode === "staff" ? "lockStaffMode()" : "requestStaffMode()"}">${icon("radio")} 運営${state.mode === "staff" ? "中" : ""}</button>`;
+      <button class="mode-btn ${state.mode === "viewer" ? "active" : ""}" onclick="setViewerMode()" title="観覧モード" aria-label="観覧モード">${icon("eye",18)}</button>
+      <button class="mode-btn ${state.mode === "staff" ? "active" : ""}" onclick="${state.mode === "staff" ? "lockStaffMode()" : "requestStaffMode()"}" title="運営モード${state.mode === "staff" ? "(操作中)" : ""}" aria-label="運営モード">${icon("radio",18)}</button>`;
   }
 
   const pinHtml = state.showPinPrompt ? `
@@ -587,20 +546,15 @@ function render() {
     </div>` : "";
 
   const controlsHtml = state.mode === "staff" ? `
-    <div class="controls">
-      <button class="ctrl-btn" ${state.currentIdx === 0 ? "disabled" : ""} onclick="goPrev()">${icon("chevleft",18)} 戻す</button>
-      <button class="ctrl-btn ctrl-ghost" onclick="resetAll()">${icon("reset",16)} 最初へ</button>
-      <button class="ctrl-btn ctrl-primary" ${state.currentIdx === ITEMS.length - 1 ? "disabled" : ""} onclick="goNext()">進める ${icon("chevright",18)}</button>
-    </div>` : "";
-
-  const recallEntryHtml = (state.mode === "staff" && !isSpecial(current.section) && current.up != null && current.up > 0) ? `
-    <div class="recall-entry">
-      <div class="recall-entry-label">UP背番号を入力(カンマ区切り)</div>
-      <div class="recall-entry-row">
-        <input class="recall-input" type="text" value="${esc(state.recallDraft)}"
-          oninput="onRecallDraftChange(this.value)" onkeydown="if(event.key==='Enter') saveRecall()" onblur="onFieldBlur()" placeholder="例: 12, 15, 22, 30" />
-        <button class="ctrl-btn ctrl-primary" style="flex:0 0 auto; padding:10px 16px;" onclick="saveRecall()">${state.recallSaved ? "保存済" : "表示する"}</button>
+    <div class="controls-sticky">
+      <div class="controls">
+        <button class="ctrl-btn" ${state.currentIdx === 0 ? "disabled" : ""} onclick="goPrev()">${icon("chevleft",18)} 戻す</button>
+        <button class="ctrl-btn ${state.confirmReset ? "ctrl-confirm" : "ctrl-ghost"}" onclick="resetAll()">${icon("reset",16)} ${state.confirmReset ? "本当に最初へ？" : "最初へ"}</button>
+        <button class="ctrl-btn ctrl-primary" ${state.currentIdx === ITEMS.length - 1 ? "disabled" : ""} onclick="goNext()">進める ${icon("chevright",18)}</button>
       </div>
+    </div>
+    <div class="link-row">
+      <button class="link-btn ${state.linkCopied ? "copied" : ""}" onclick="copyViewerLink()">${state.linkCopied ? "コピーしました" : "観覧用リンクをコピー"}</button>
     </div>` : "";
 
   const nextHtml = next ? `
@@ -609,75 +563,72 @@ function render() {
       <span class="next-text">${esc(next.time)}　${isSpecial(next.section) ? esc(next.cls) : `${esc(next.section)} ${esc(next.cls)} ${esc(next.event)} ${esc(next.round)}`}</span>
     </div>` : "";
 
-  const rowsHtml = ITEMS.map((item, idx) => {
+  const sectionNames = [...new Set(ITEMS.filter(i => !isSpecial(i.section)).map(i => i.section))];
+  const filterPillsHtml = `
+    <div class="filter-row">
+      <button class="filter-pill ${state.sectionFilter === "all" ? "active" : ""}" onclick="setSectionFilter('all')">すべて</button>
+      ${sectionNames.map(name => `<button class="filter-pill ${state.sectionFilter === name ? "active" : ""}" onclick="setSectionFilter('${name.replace(/'/g, "\\'")}')">${esc(name)}</button>`).join("")}
+    </div>`;
+
+  const visibleItems = state.sectionFilter === "all" ? ITEMS : ITEMS.filter(i => i.section === state.sectionFilter);
+
+  const rowsHtml = visibleItems.map((item) => {
+    const idx = ITEMS.indexOf(item);
     const rstate = idx < state.currentIdx ? "done" : idx === state.currentIdx ? "current" : "upcoming";
     const tone = sectionTone(item.section);
-    const entries = entriesForItem(item);
-    const isExpanded = state.expandedRows.has(item.no);
-    const recallText = state.recalls[String(item.no)];
-    const rowClasses = ["row", "clickable", rstate === "current" ? "current" : "", rstate === "done" ? "done" : ""].filter(Boolean).join(" ");
+    const rowClasses = ["row", rstate === "current" ? "current" : "", rstate === "done" ? "done" : ""].filter(Boolean).join(" ");
 
     let bodyHtml;
     if (isSpecial(item.section)) {
       bodyHtml = `<span class="row-special">${esc(item.cls)}</span>`;
     } else {
-      bodyHtml = `<span><strong>${esc(item.section)}</strong> ${esc(item.cls)} ${esc(item.event)} ${esc(item.round)}${item.heat > 1 ? ` (${item.heat}ヒート)` : ""}</span>`;
+      bodyHtml = `
+        <div class="row-line1">${esc(item.section)}<span class="row-cls">${esc(item.cls)}</span></div>
+        <div class="row-line2"><span class="row-event">${esc(item.event)}</span><span class="row-round">${esc(item.round)}</span>${item.heat > 1 ? `<span class="row-heat">(${item.heat}ヒート)</span>` : ""}</div>`;
     }
-    const recallLine = recallText ? `<div class="row-recall">UP: ${esc(recallText)}</div>` : "";
 
     const statusHtml = `
       ${rstate === "current" ? `<span class="badge-now">進行中</span>` : ""}
-      ${rstate === "done" ? `<span class="badge-done">終了</span>` : ""}
-      ${entries ? `<button class="expand-btn" onclick="event.stopPropagation(); toggleRow(${item.no})">${isExpanded ? "背番号 ▲" : "背番号 ▼"}</button>` : ""}`;
-
-    const advancedSet = new Set(parseRecallTokens(recallText));
-    const chipsHtml = (isExpanded && entries) ? `
-      <div class="bib-chip-row">
-        ${entries.map(e => `<span class="bib-chip ${advancedSet.has(e.bib) ? "advanced" : ""}">${esc(e.bib)}</span>`).join("")}
-      </div>
-      ${(state.mode === "staff" && item.up != null && item.up > 0) ? `
-      <div class="row-recall-entry">
-        <div class="recall-entry-label">この行のUP背番号(進行には触れません)</div>
-        <div class="recall-entry-row">
-          <input class="recall-input row-recall-input" type="text" data-no="${item.no}" value="${esc(state.rowRecallDrafts[item.no] ?? (recallText || ""))}"
-            oninput="onRowRecallDraftChange(${item.no}, this.value)" onkeydown="if(event.key==='Enter') saveRowRecall(${item.no})" onblur="onFieldBlur()" placeholder="例: 12, 15, 22, 30" />
-          <button class="ctrl-btn ctrl-primary" style="flex:0 0 auto; padding:10px 16px;" onclick="event.stopPropagation(); saveRowRecall(${item.no})">${state.rowRecallSavedNo === item.no ? "保存済" : "保存"}</button>
-        </div>
-      </div>` : ""}` : "";
+      ${rstate === "done" ? `<span class="badge-done">終了</span>` : ""}`;
 
     return `
-      <div class="${rowClasses}" style="border-left:4px solid ${TONE_COLOR[tone]}" onclick="toggleRow(${item.no})">
+      <div class="${rowClasses}" style="border-left:4px solid ${TONE_COLORS()[tone]}">
         <div class="row-no">${item.no}</div>
         <div class="row-time">${esc(item.time)}</div>
-        <div class="row-body">${bodyHtml}${recallLine}</div>
+        <div class="row-body">${bodyHtml}</div>
         <div class="row-status">${statusHtml}</div>
-      </div>
-      ${chipsHtml}`;
+      </div>`;
   }).join("");
 
   const setupNotice = !GAS_ENDPOINT.startsWith("https://script.google.com/macros/") ? `
     <div class="setup-notice">⚠ GAS_ENDPOINT が未設定です。コード上部の GAS_ENDPOINT に、デプロイしたGoogle Apps ScriptのウェブアプリURLを貼り付けてください。</div>` : "";
 
+  // #appを丸ごと作り直すとページの縦スクロール位置がずれる場合があるため、先に保存しておく
+  const prevScrollY = window.scrollY;
+
   document.getElementById("app").innerHTML = `
     <header>
       <div class="header-top">
-        <div>
+        <div class="header-title-row">
           <div class="eyebrow">PROGRESS BOARD</div>
-          <h1>2026 前期中部日本ダンス選手権</h1>
-          <div class="subtitle">併催：2026 中部ダンスフェスティバル in 名古屋</div>
+          <h1>2026 後期中部ダンス選手権<br class="title-break">in 名古屋</h1>
+          <div class="subtitle">JDC公認｜2026年9月6日｜岡谷鋼機名古屋公会堂</div>
         </div>
-        <div class="mode-toggle">${modeToggleHtml}</div>
+        <div class="header-toggle-row">
+          <div class="mode-toggle">${modeToggleHtml}</div>
+        </div>
       </div>
       ${setupNotice}
       ${pinHtml}
       <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
       <div class="progress-label">NO.${current.no} / ${ITEMS.length}　${progressPct}%</div>
+      <div class="now-inline">${renderNowInline(current)}</div>
+      <div class="now-card-wrap">${renderNowCard(current)}</div>
     </header>
 
-    ${renderNowCard(current)}
     ${nextHtml}
     ${controlsHtml}
-    ${recallEntryHtml}
+    ${filterPillsHtml}
 
     <div class="list-wrap">${rowsHtml}</div>
 
@@ -689,40 +640,132 @@ function render() {
     </footer>
 
     <div class="nexus-credit">
-      <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
-        <path d="M20 3 L34 20 L20 37 L6 20 Z" stroke="#ff5a4e" stroke-width="1.6"/>
-        <circle cx="20" cy="20" r="3" fill="#ff5a4e"/>
-        <circle cx="20" cy="9" r="2" fill="#999999"/><circle cx="29" cy="20" r="2" fill="#999999"/>
-        <circle cx="20" cy="31" r="2" fill="#999999"/><circle cx="11" cy="20" r="2" fill="#999999"/>
-        <line x1="20" y1="20" x2="20" y2="9" stroke="#999999"/><line x1="20" y1="20" x2="29" y2="20" stroke="#999999"/>
-        <line x1="20" y1="20" x2="20" y2="31" stroke="#999999"/><line x1="20" y1="20" x2="11" y2="20" stroke="#999999"/>
-      </svg>
-      <span>
-        <span class="nexus-word">Created by NEXUS ENTERTAINMENT</span>
-        <span class="nexus-tagline">進行も、演出も。窓口はひとつに。</span>
-      </span>
+      <div class="nexus-card">
+        <svg width="22" height="22" viewBox="0 0 100 100" fill="none" stroke-linecap="round">
+          <path d="M50,17 L83,50 L50,83 L17,50 Z" stroke="#C9A15F" stroke-width="3" opacity="0.55"/>
+          <line x1="50" y1="50" x2="50" y2="17" stroke="#C9A15F" stroke-width="4"/>
+          <line x1="50" y1="50" x2="83" y2="50" stroke="#5B8C87" stroke-width="4"/>
+          <line x1="50" y1="50" x2="50" y2="83" stroke="#C9A15F" stroke-width="4"/>
+          <line x1="50" y1="50" x2="17" y2="50" stroke="#5B8C87" stroke-width="4"/>
+          <circle cx="50" cy="17" r="6" fill="#12151C" stroke="#C9A15F" stroke-width="4"/>
+          <circle cx="83" cy="50" r="6" fill="#12151C" stroke="#5B8C87" stroke-width="4"/>
+          <circle cx="50" cy="83" r="6" fill="#12151C" stroke="#C9A15F" stroke-width="4"/>
+          <circle cx="17" cy="50" r="6" fill="#12151C" stroke="#5B8C87" stroke-width="4"/>
+          <circle cx="50" cy="50" r="10" fill="#12151C" stroke="#ECE8DE" stroke-width="3"/>
+          <circle cx="50" cy="50" r="4.5" fill="#C9A15F"/>
+        </svg>
+        <span>
+          <span class="nexus-word">NEXUS ENTERTAINMENT</span>
+          <span class="nexus-tagline">進行も、演出も。窓口はひとつに。</span>
+        </span>
+      </div>
     </div>`;
 
-  // スクロール位置を現在の行に合わせる(進行が実際に変わった時だけ)
+  // ページ全体のスクロール位置を直前の値にまず復元する(そうしないとブラウザの計算タイミング次第で0に寄ることがある)
+  window.scrollTo(0, prevScrollY);
+  syncHeaderHeightVar(); // 新しいheader要素の高さを、固定操作バーの位置(--header-h)に反映
+
+  // 進行中の行までスクロールを合わせる(進行が実際に変わった時だけ。
+  // ただし他者操作による更新中に手動スクロール中の場合は待つ。運営が自分でボタンを押した時は必ず追従する)
   if (state.currentIdx !== lastScrolledIdx) {
-    lastScrolledIdx = state.currentIdx;
-    const listWrap = document.querySelector(".list-wrap");
-    const currentRow = document.querySelector(".row.current");
-    if (listWrap && currentRow) {
-      const wrapRect = listWrap.getBoundingClientRect();
-      const rowRect = currentRow.getBoundingClientRect();
-      if (rowRect.top < wrapRect.top || rowRect.bottom > wrapRect.bottom) {
-        listWrap.scrollTop += (rowRect.top - wrapRect.top) - (wrapRect.height / 2);
+    if (Date.now() < manualScrollUntil && !forceScrollNext) {
+      // 手動でスクロール中なので今回は自動スクロールを見送る(次の進行変化 or 猶予終了後に追いつく)
+      // ↑この場合もlastScrolledIdxは更新しないので、猶予が切れた後の次の再描画で追いつける
+    } else {
+      forceScrollNext = false;
+      lastScrolledIdx = state.currentIdx;
+      const currentRow = document.querySelector(".row.current");
+      const stickyBar = document.querySelector(".controls-sticky") || document.querySelector("header");
+      if (currentRow && stickyBar) {
+        // 固定バー(ヘッダー+操作ボタン)の高さぶん、行の上に余白を持たせてからscrollIntoViewに任せる。
+        // 座標を自前で計算してscrollToするより、モバイルのアドレスバー出し入れ等による
+        // ビューポート変化に強い(ブラウザ側が都度再計算してくれるため)。
+        const offset = stickyBar.getBoundingClientRect().bottom + 8;
+        document.documentElement.style.setProperty("--sticky-offset", offset + "px");
+        currentRow.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }
   }
 }
 let lastScrolledIdx = -1;
+let forceScrollNext = false;
+let manualScrollUntil = 0;
+const MANUAL_SCROLL_GRACE_MS = 8000; // この間は「閲覧者が自分でスクロール中」とみなし、自動スクロールを止める
+function markManualScroll() { manualScrollUntil = Date.now() + MANUAL_SCROLL_GRACE_MS; }
+
+function syncHeaderHeightVar() {
+  const header = document.querySelector("header");
+  if (header) document.documentElement.style.setProperty("--header-h", header.getBoundingClientRect().height + "px");
+}
+
+// ヘッダーの折りたたみは、しきい値+CSSトランジションではなく、スクロール量に直接連動する
+// 連続値(--collapse: 0〜1)で駆動する。こうすることで「ある地点で切り替わるアニメーション」が
+// 存在しなくなり、どんなにゆっくりスクロールしても指の動きとズレなく追従する。
+// rAFで1フレームにつき1回だけ処理をまとめることで、スクロールイベントの多発による負荷も抑えている。
+//
+// ただし実機では、スクロール開始直後の1秒弱、Android Chromeのアドレスバーが引っ込む
+// アニメーションと連動してscrollYの値自体が細かく前後することがある(実際の指の動きとは無関係)。
+// これを生の値のまま反映すると、その揺れがそのままチラつきとして見えてしまうため、
+// 目標値に対して軽いローパスフィルタ(指数移動平均)をかけて追従させる。
+// スクロール量との連動という考え方自体は変えず、細かいノイズだけを吸収する。
+const COLLAPSE_RANGE = 60; // この距離(px)スクロールしきると完全に折りたたまれる
+const COLLAPSE_SMOOTHING = 0.22; // 小さいほど滑らか(ノイズに強い)/大きいほど追従が速い
+let latestScrollY = 0;
+let displayedCollapse = 0;
+let scrollRafPending = false;
+function onScroll() {
+  latestScrollY = window.scrollY;
+  if (!scrollRafPending) {
+    scrollRafPending = true;
+    requestAnimationFrame(applyScrollCollapse);
+  }
+}
+function applyScrollCollapse() {
+  scrollRafPending = false;
+  const target = Math.max(0, Math.min(1, latestScrollY / COLLAPSE_RANGE));
+  displayedCollapse += (target - displayedCollapse) * COLLAPSE_SMOOTHING;
+  if (Math.abs(target - displayedCollapse) < 0.003) displayedCollapse = target;
+  document.documentElement.style.setProperty("--collapse", displayedCollapse);
+  syncHeaderHeightVar(); // ヘッダーの高さも連続的に変わるので、フレームごとに追従させる
+  if (displayedCollapse !== target) {
+    // まだ目標値に収束していなければ、次のフレームも追いかけて滑らかに近づける
+    scrollRafPending = true;
+    requestAnimationFrame(applyScrollCollapse);
+  }
+}
+
+/* ============ ポーリング制御(バックグラウンド中は止めてバッテリーを節約) ============ */
+let pollTimer = null;
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(fetchState, POLL_MS);
+}
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopPolling();
+  } else {
+    fetchState(); // 復帰した瞬間に最新状態を取りに行く
+    startPolling();
+  }
+});
 
 /* ============ 起動 ============ */
+window.addEventListener("scroll", onScroll, { passive: true });
+// 実際に画面を動かす操作(ホイール/指で動かす)だけを「手動スクロール中」の合図にする。
+// touchstart/mousedownは「進める」等のボタンをタップしただけでも発火してしまい、
+// その直後の自動スクロール追従を誤ってブロックしてしまうため使わない。
+window.addEventListener("wheel", markManualScroll, { passive: true });
+window.addEventListener("touchmove", markManualScroll, { passive: true });
+
 render();
+latestScrollY = window.scrollY;
+applyScrollCollapse(); // 読み込み時点で既にスクロールされていた場合(再読み込み等)に備え、初期値を合わせておく
 fetchState();
-setInterval(fetchState, POLL_MS);
+startPolling();
 </script>
 </body>
 </html>
