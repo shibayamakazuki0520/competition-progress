@@ -379,7 +379,7 @@ function icon(name, size) {
 
 /* ============ 通信ロジック ============ */
 let lastLocalWriteAt = 0;
-const WRITE_GRACE_MS = 6000; // 自分の書き込み直後は、追いついていないpollの結果を無視する
+const WRITE_GRACE_MS = 30000; // 自分の書き込み直後は、追いついていないpollの結果を無視する(GASの反映タイムラグを考慮し余裕を持たせる)
 
 function isUserEditing() {
   const el = document.activeElement;
@@ -426,29 +426,42 @@ async function fetchState() {
   }
 }
 
-// 書き込みは「送りっぱなし」にせず、少し待ってから実際に反映されたかを再取得して確認する。
-// 反映が確認できなければ、間隔を空けて自動で再送信する(最大3回)。
-// GASは書き込み直後の読み取りが不安定なことがある(反映に時間がかかる/まれに失敗する)ため、
-// 一度の送信を信用しすぎない設計にしている。
-async function pushStateWithRetry(idx, ts, attempt) {
-  attempt = attempt || 1;
-  const MAX_ATTEMPTS = 3;
-  lastLocalWriteAt = Date.now(); // 再送信のたびに、pollがこの書き込みを邪魔しないよう猶予を延長する
+// 書き込みは「送りっぱなし」にせず、実際に反映されたかを再取得して確認する。
+// GASは書き込み直後の読み取りに、数秒〜まれに20秒近いタイムラグが出ることがある(既知の制約)。
+// これより短い時間で「失敗」と判定すると、実際には成功しているのに誤警告を出してしまうため、
+// 間隔を空けながら気長に(合計25秒程度)確認する。再送信は最後の保険としてのみ行う。
+const CONFIRM_WAITS_MS = [3000, 5000, 7000, 8000]; // 累計 約23秒
+async function pushStateWithRetry(idx, ts) {
+  lastLocalWriteAt = Date.now();
   try {
     await pushSharedState({ currentIdx: idx, updatedAt: ts });
   } catch (e) {
     console.error("送信に失敗しました", e);
   }
-  await sleep(1200);
+  for (const waitMs of CONFIRM_WAITS_MS) {
+    await sleep(waitMs);
+    lastLocalWriteAt = Date.now(); // 確認中も、pollがこの書き込みを邪魔しないよう猶予を延長し続ける
+    try {
+      const confirmed = await fetchSharedState();
+      if (confirmed && confirmed.updatedAt === ts) return true; // 反映を確認できた
+    } catch (e) {
+      console.error("反映確認のための読み込みに失敗しました", e);
+    }
+  }
+  // ここまで(約23秒)確認できなければ、念のため一度だけ送信し直して、もう少しだけ待つ
+  console.warn("反映を確認できなかったため再送信します");
+  lastLocalWriteAt = Date.now();
+  try {
+    await pushSharedState({ currentIdx: idx, updatedAt: ts });
+  } catch (e) {
+    console.error("再送信に失敗しました", e);
+  }
+  await sleep(4000);
   try {
     const confirmed = await fetchSharedState();
-    if (confirmed && confirmed.updatedAt === ts) return true; // 反映を確認できた
+    if (confirmed && confirmed.updatedAt === ts) return true;
   } catch (e) {
-    console.error("反映確認のための読み込みに失敗しました", e);
-  }
-  if (attempt < MAX_ATTEMPTS) {
-    console.warn(`反映を確認できなかったため再送信します(${attempt + 1}回目)`);
-    return pushStateWithRetry(idx, ts, attempt + 1);
+    console.error("再送信後の反映確認に失敗しました", e);
   }
   return false;
 }
