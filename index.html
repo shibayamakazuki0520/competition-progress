@@ -105,6 +105,10 @@
     margin-top: 12px; font-size: 11px; line-height: 1.6; color: var(--warn-text);
     background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 8px 10px;
   }
+  .sync-warning {
+    margin-bottom: 10px; font-size: 12px; line-height: 1.5; font-weight: 700; color: #ffffff;
+    background: var(--red); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+  }
 
   .progress-track { margin-top: 14px; height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--accent); transition: width .4s ease; }
@@ -332,8 +336,9 @@ async function fetchSharedState() {
 }
 async function pushSharedState(state) {
   const url = `${GAS_ENDPOINT}?data=${encodeURIComponent(JSON.stringify(state))}`;
-  await fetch(url, { method: "GET", mode: "no-cors" });
+  await fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" });
 }
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 /* ============ 状態 ============ */
 const state = {
@@ -351,6 +356,7 @@ const state = {
   sectionFilter: "all",
   confirmReset: false,
   linkCopied: false,
+  consecutiveFailures: 0,
   viewerOnlyLink: (() => {
     try { return new URLSearchParams(location.search).get("mode") === "viewer"; }
     catch (e) { return false; }
@@ -388,6 +394,7 @@ async function fetchState() {
     // 古いデータで巻き戻ってしまうことがあるため、少しの間はpollの結果を無視する
     if (Date.now() - lastLocalWriteAt < WRITE_GRACE_MS) {
       state.loaded = true;
+      state.consecutiveFailures = 0;
       return;
     }
 
@@ -395,25 +402,55 @@ async function fetchState() {
     const nextUpdatedAt = parsed.updatedAt ?? null;
     const changed = nextIdx !== state.currentIdx || nextUpdatedAt !== state.updatedAt;
     const hadError = state.loadError;
+    const hadFailures = state.consecutiveFailures > 0;
 
     state.currentIdx = nextIdx;
     state.updatedAt = nextUpdatedAt;
     state.loadError = false;
+    state.consecutiveFailures = 0;
 
     const wasFirstLoad = !state.loaded;
     state.loaded = true;
 
     // 変化がない時は再描画しない(スクロール位置を保持するため)
-    if (!changed && !hadError && !wasFirstLoad) return;
+    if (!changed && !hadError && !hadFailures && !wasFirstLoad) return;
     if (isUserEditing()) { state.pendingRender = true; return; }
     render();
   } catch (e) {
     console.error("読み込みに失敗しました", e);
     state.loadError = true;
     state.loaded = true;
+    state.consecutiveFailures += 1;
     if (isUserEditing()) { state.pendingRender = true; return; }
     render();
   }
+}
+
+// 書き込みは「送りっぱなし」にせず、少し待ってから実際に反映されたかを再取得して確認する。
+// 反映が確認できなければ、間隔を空けて自動で再送信する(最大3回)。
+// GASは書き込み直後の読み取りが不安定なことがある(反映に時間がかかる/まれに失敗する)ため、
+// 一度の送信を信用しすぎない設計にしている。
+async function pushStateWithRetry(idx, ts, attempt) {
+  attempt = attempt || 1;
+  const MAX_ATTEMPTS = 3;
+  lastLocalWriteAt = Date.now(); // 再送信のたびに、pollがこの書き込みを邪魔しないよう猶予を延長する
+  try {
+    await pushSharedState({ currentIdx: idx, updatedAt: ts });
+  } catch (e) {
+    console.error("送信に失敗しました", e);
+  }
+  await sleep(1200);
+  try {
+    const confirmed = await fetchSharedState();
+    if (confirmed && confirmed.updatedAt === ts) return true; // 反映を確認できた
+  } catch (e) {
+    console.error("反映確認のための読み込みに失敗しました", e);
+  }
+  if (attempt < MAX_ATTEMPTS) {
+    console.warn(`反映を確認できなかったため再送信します(${attempt + 1}回目)`);
+    return pushStateWithRetry(idx, ts, attempt + 1);
+  }
+  return false;
 }
 
 async function pushState(idx) {
@@ -424,14 +461,8 @@ async function pushState(idx) {
   forceScrollNext = true; // 運営が自分でボタンを押した時は、直前の手動スクロールに関係なく必ず追従する
   render();
   const hadError = state.saveError;
-  try {
-    await pushSharedState({ currentIdx: idx, updatedAt: ts });
-    state.saveError = false;
-  } catch (e) {
-    console.error("保存に失敗しました", e);
-    state.saveError = true;
-  }
-  // 見た目に変化がある時(エラー状態が変わった時)だけ再描画する
+  const ok = await pushStateWithRetry(idx, ts);
+  state.saveError = !ok;
   if (state.saveError !== hadError) render();
 }
 
@@ -592,6 +623,11 @@ function render() {
   const setupNotice = !GAS_ENDPOINT.startsWith("https://script.google.com/macros/") ? `
     <div class="setup-notice">⚠ GAS_ENDPOINT が未設定です。コード上部の GAS_ENDPOINT に、デプロイしたGoogle Apps ScriptのウェブアプリURLを貼り付けてください。</div>` : "";
 
+  const syncWarningHtml = (state.consecutiveFailures >= 2 || state.saveError) ? `
+    <div class="sync-warning">⚠ ${state.saveError
+      ? "進行の送信に失敗しました。もう一度ボタンを押すか、回線をご確認ください。"
+      : `通信が不安定です(${state.consecutiveFailures}回連続で読み込み失敗)。回線をご確認ください。`}</div>` : "";
+
   // #appを丸ごと作り直すとページの縦スクロール位置がずれる場合があるため、先に保存しておく
   const prevScrollY = window.scrollY;
 
@@ -613,7 +649,7 @@ function render() {
       <div class="progress-label">NO.${current.no} / ${ITEMS.length}　${progressPct}%</div>
     </header>
 
-    <div class="now-sticky">${renderNowCard(current)}</div>
+    <div class="now-sticky">${syncWarningHtml}${renderNowCard(current)}</div>
 
     ${controlsHtml}
     ${filterPillsHtml}
