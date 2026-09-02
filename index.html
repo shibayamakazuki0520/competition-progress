@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>2026 後期中部ダンス選手権 in 名古屋 - 進行状況</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -321,7 +324,9 @@ function TONE_COLORS() {
 
 /* ============ ネットワーク ============ */
 async function fetchSharedState() {
-  const res = await fetch(GAS_ENDPOINT, { method: "GET" });
+  // cache: "no-store" で、途中の経路(ブラウザ/モバイル回線のキャッシュ等)に
+  // 古いレスポンスを返させないようにする
+  const res = await fetch(GAS_ENDPOINT, { method: "GET", cache: "no-store" });
   if (!res.ok) throw new Error("fetch failed: " + res.status);
   return await res.json();
 }
