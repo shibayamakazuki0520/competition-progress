@@ -84,21 +84,9 @@
     opacity: calc(1 - var(--collapse, 0));
   }
 
-  .now-inline {
-    display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 800; color: var(--accent);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    margin-top: calc(10px * var(--collapse, 0));
-    max-height: calc(30px * var(--collapse, 0));
-    opacity: var(--collapse, 0);
-  }
-  .now-inline .now-inline-label { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--accent); flex-shrink: 0; }
-  .now-inline .now-inline-time { color: var(--ink); font-weight: 700; flex-shrink: 0; }
-
-  .now-card-wrap {
-    overflow: hidden;
-    margin-top: calc(12px - 12px * var(--collapse, 0));
-    max-height: calc(240px - 240px * var(--collapse, 0));
-    opacity: calc(1 - var(--collapse, 0));
+  .now-sticky {
+    position: sticky; top: var(--header-h, 96px); z-index: 8;
+    background: var(--bg); padding: 10px 16px 0;
   }
 
   .mode-toggle { display: flex; gap: 4px; background: var(--ink); padding: 4px; border-radius: 10px; }
@@ -140,7 +128,7 @@
   .next-text { color: var(--text); }
 
   .controls-sticky {
-    position: sticky; top: var(--header-h, 96px); z-index: 9;
+    position: sticky; top: calc(var(--header-h, 96px) + var(--now-h, 0px)); z-index: 9;
     background: var(--bg); padding: 14px 16px 0;
   }
   .controls { display: flex; gap: 8px; }
@@ -162,8 +150,12 @@
   }
   .link-btn.copied { color: var(--accent); border-color: var(--accent); }
 
+  .filter-sticky {
+    position: sticky; top: calc(var(--header-h, 96px) + var(--now-h, 0px) + var(--controls-h, 0px)); z-index: 7;
+    background: var(--bg); padding-top: 10px; padding-bottom: 4px;
+  }
   .filter-row {
-    display: flex; gap: 6px; margin: 14px 16px 0; overflow-x: auto; padding-bottom: 2px;
+    display: flex; gap: 6px; margin: 0 16px; overflow-x: auto; padding-bottom: 2px;
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .filter-row::-webkit-scrollbar { display: none; }
@@ -510,13 +502,6 @@ function renderNowCard(current) {
   return `<section class="now-card" style="border-left-color:${TONE_COLORS()[tone]}"><div class="now-label">NOW</div>${body}</section>`;
 }
 
-function renderNowInline(current) {
-  if (isSpecial(current.section)) {
-    return `<span class="now-inline-label">NOW</span><span class="now-inline-time">${esc(current.time)}</span><span>${esc(current.cls)}</span>`;
-  }
-  return `<span class="now-inline-label">NOW</span><span class="now-inline-time">${esc(current.time)}</span><span>${esc(current.section)} ${esc(current.cls)} ${esc(current.event)} ${esc(current.round)}</span>`;
-}
-
 function render() {
   const current = ITEMS[state.currentIdx];
   const next = ITEMS[state.currentIdx + 1];
@@ -565,9 +550,11 @@ function render() {
 
   const sectionNames = [...new Set(ITEMS.filter(i => !isSpecial(i.section)).map(i => i.section))];
   const filterPillsHtml = `
-    <div class="filter-row">
-      <button class="filter-pill ${state.sectionFilter === "all" ? "active" : ""}" onclick="setSectionFilter('all')">すべて</button>
-      ${sectionNames.map(name => `<button class="filter-pill ${state.sectionFilter === name ? "active" : ""}" onclick="setSectionFilter('${name.replace(/'/g, "\\'")}')">${esc(name)}</button>`).join("")}
+    <div class="filter-sticky">
+      <div class="filter-row">
+        <button class="filter-pill ${state.sectionFilter === "all" ? "active" : ""}" onclick="setSectionFilter('all')">すべて</button>
+        ${sectionNames.map(name => `<button class="filter-pill ${state.sectionFilter === name ? "active" : ""}" onclick="setSectionFilter('${name.replace(/'/g, "\\'")}')">${esc(name)}</button>`).join("")}
+      </div>
     </div>`;
 
   const visibleItems = state.sectionFilter === "all" ? ITEMS : ITEMS.filter(i => i.section === state.sectionFilter);
@@ -622,9 +609,9 @@ function render() {
       ${pinHtml}
       <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
       <div class="progress-label">NO.${current.no} / ${ITEMS.length}　${progressPct}%</div>
-      <div class="now-inline">${renderNowInline(current)}</div>
-      <div class="now-card-wrap">${renderNowCard(current)}</div>
     </header>
+
+    <div class="now-sticky">${renderNowCard(current)}</div>
 
     ${nextHtml}
     ${controlsHtml}
@@ -675,7 +662,7 @@ function render() {
       forceScrollNext = false;
       lastScrolledIdx = state.currentIdx;
       const currentRow = document.querySelector(".row.current");
-      const stickyBar = document.querySelector(".controls-sticky") || document.querySelector("header");
+      const stickyBar = document.querySelector(".filter-sticky") || document.querySelector(".controls-sticky") || document.querySelector(".now-sticky") || document.querySelector("header");
       if (currentRow && stickyBar) {
         // 固定バー(ヘッダー+操作ボタン)の高さぶん、行の上に余白を持たせてからscrollIntoViewに任せる。
         // 座標を自前で計算してscrollToするより、モバイルのアドレスバー出し入れ等による
@@ -696,6 +683,10 @@ function markManualScroll() { manualScrollUntil = Date.now() + MANUAL_SCROLL_GRA
 function syncHeaderHeightVar() {
   const header = document.querySelector("header");
   if (header) document.documentElement.style.setProperty("--header-h", header.getBoundingClientRect().height + "px");
+  const nowSticky = document.querySelector(".now-sticky");
+  if (nowSticky) document.documentElement.style.setProperty("--now-h", nowSticky.getBoundingClientRect().height + "px");
+  const controlsSticky = document.querySelector(".controls-sticky");
+  document.documentElement.style.setProperty("--controls-h", (controlsSticky ? controlsSticky.getBoundingClientRect().height : 0) + "px");
 }
 
 // ヘッダーの折りたたみは、しきい値+CSSトランジションではなく、スクロール量に直接連動する
