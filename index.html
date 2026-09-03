@@ -327,16 +327,28 @@ function TONE_COLORS() {
 }
 
 /* ============ ネットワーク ============ */
+// AbortControllerでタイムアウトを必ず設ける。
+// タブがバックグラウンドに回った時など、通信がブラウザ側で宙に浮いたまま
+// 一生終わらなくなることがあり、それがfetchInFlightのロックを永遠に解除できなくする
+// 原因になっていた(実機で確認済み)。必ず一定時間で決着させることで、
+// 「同期待機中のまま固まる」事態を防ぐ。
+function withTimeout(promiseFactory, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return promiseFactory(controller.signal).finally(() => clearTimeout(timer));
+}
 async function fetchSharedState() {
   // cache: "no-store" で、途中の経路(ブラウザ/モバイル回線のキャッシュ等)に
   // 古いレスポンスを返させないようにする
-  const res = await fetch(GAS_ENDPOINT, { method: "GET", cache: "no-store" });
-  if (!res.ok) throw new Error("fetch failed: " + res.status);
-  return await res.json();
+  return withTimeout(async (signal) => {
+    const res = await fetch(GAS_ENDPOINT, { method: "GET", cache: "no-store", signal });
+    if (!res.ok) throw new Error("fetch failed: " + res.status);
+    return await res.json();
+  }, 12000);
 }
 async function pushSharedState(state) {
   const url = `${GAS_ENDPOINT}?data=${encodeURIComponent(JSON.stringify(state))}`;
-  await fetch(url, { method: "GET", mode: "no-cors", cache: "no-store" });
+  return withTimeout((signal) => fetch(url, { method: "GET", mode: "no-cors", cache: "no-store", signal }), 12000);
 }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
@@ -809,6 +821,9 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     stopPolling();
   } else {
+    // バックグラウンド中に通信が宙に浮いたまま残っている可能性があるため、
+    // 復帰した瞬間は念のためロックを強制的に解除してから取りに行く(二重の安全策)
+    fetchInFlight = false;
     fetchState(); // 復帰した瞬間に最新状態を取りに行く
     startPolling();
   }
