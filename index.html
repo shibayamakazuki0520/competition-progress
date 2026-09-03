@@ -91,6 +91,21 @@
     position: sticky; top: var(--header-h, 96px); z-index: 8;
     background: var(--bg); padding: 10px 16px 0;
   }
+  .now-card-wrap {
+    overflow: hidden;
+    max-height: calc(240px - 240px * var(--collapse, 0));
+    opacity: calc(1 - var(--collapse, 0));
+  }
+  .now-inline {
+    display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 800; color: var(--accent);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: var(--panel2); border-radius: 10px; padding: 10px 14px;
+    max-height: calc(44px * var(--collapse, 0));
+    opacity: var(--collapse, 0);
+    margin-top: calc(10px * var(--collapse, 0));
+  }
+  .now-inline .now-inline-label { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--accent); flex-shrink: 0; }
+  .now-inline .now-inline-time { color: var(--ink); font-weight: 700; flex-shrink: 0; }
 
   .mode-toggle { display: flex; gap: 4px; background: var(--ink); padding: 4px; border-radius: 10px; }
   .mode-btn {
@@ -586,6 +601,13 @@ function renderNowCard(current) {
   return `<section class="now-card" style="border-left-color:${toneColor};"><div class="now-label">NOW</div>${body}</section>`;
 }
 
+function renderNowInline(current) {
+  if (isSpecial(current.section)) {
+    return `<span class="now-inline-label">NOW</span><span class="now-inline-time">${esc(current.time)}</span><span>${esc(current.cls)}</span>`;
+  }
+  return `<span class="now-inline-label">NOW</span><span class="now-inline-time">${esc(current.time)}</span><span>${esc(current.section)} ${esc(current.cls)} ${esc(current.event)} ${esc(current.round)}</span>`;
+}
+
 function render() {
   const current = ITEMS[state.currentIdx];
   const progressPct = Math.round(((state.currentIdx + 1) / ITEMS.length) * 100);
@@ -694,7 +716,11 @@ function render() {
       <div class="progress-label">NO.${current.no} / ${ITEMS.length}　${progressPct}%</div>
     </header>
 
-    <div class="now-sticky">${syncWarningHtml}${renderNowCard(current)}</div>
+    <div class="now-sticky">
+      ${syncWarningHtml}
+      <div class="now-card-wrap">${renderNowCard(current)}</div>
+      <div class="now-inline">${renderNowInline(current)}</div>
+    </div>
 
     ${controlsHtml}
     ${filterPillsHtml}
