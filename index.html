@@ -386,7 +386,12 @@ function isUserEditing() {
   return !!(el && el.classList.contains("pin-input"));
 }
 
+let fetchInFlight = false; // 前回の問い合わせがまだ終わっていない間は、次のポーリングを重ねて送らない
+                            // (遅れて返ってきた古い結果が、後から来た新しい結果を上書きして
+                            //  「セクションが行ったり来たりする」ように見える競合を防ぐため)
 async function fetchState() {
+  if (fetchInFlight) return;
+  fetchInFlight = true;
   try {
     const parsed = await fetchSharedState();
 
@@ -423,6 +428,8 @@ async function fetchState() {
     state.consecutiveFailures += 1;
     if (isUserEditing()) { state.pendingRender = true; return; }
     render();
+  } finally {
+    fetchInFlight = false;
   }
 }
 
@@ -430,8 +437,14 @@ async function fetchState() {
 // GASは書き込み直後の読み取りに、数秒〜まれに20秒近いタイムラグが出ることがある(既知の制約)。
 // これより短い時間で「失敗」と判定すると、実際には成功しているのに誤警告を出してしまうため、
 // 間隔を空けながら気長に(合計25秒程度)確認する。再送信は最後の保険としてのみ行う。
+//
+// 素早く連続でボタンを押すと(進める→戻す、など)、それぞれの操作が並行して最大27秒間
+// 確認処理を続けてしまい、GASへのリクエストが渋滞して通常のポーリングまで巻き込まれることがある。
+// これを防ぐため、「今一番新しい操作」だけを追いかけ、後から別の操作が来たら
+// 古い方の確認処理はその場で諦めて通信を止める(writeGenerationで判定)。
 const CONFIRM_WAITS_MS = [3000, 5000, 7000, 8000]; // 累計 約23秒
-async function pushStateWithRetry(idx, ts) {
+let writeGeneration = 0;
+async function pushStateWithRetry(idx, ts, myGeneration) {
   lastLocalWriteAt = Date.now();
   try {
     await pushSharedState({ currentIdx: idx, updatedAt: ts });
@@ -439,7 +452,9 @@ async function pushStateWithRetry(idx, ts) {
     console.error("送信に失敗しました", e);
   }
   for (const waitMs of CONFIRM_WAITS_MS) {
+    if (myGeneration !== writeGeneration) return true; // より新しい操作に上書きされたので、この確認はもう追いかけない
     await sleep(waitMs);
+    if (myGeneration !== writeGeneration) return true;
     lastLocalWriteAt = Date.now(); // 確認中も、pollがこの書き込みを邪魔しないよう猶予を延長し続ける
     try {
       const confirmed = await fetchSharedState();
@@ -448,6 +463,7 @@ async function pushStateWithRetry(idx, ts) {
       console.error("反映確認のための読み込みに失敗しました", e);
     }
   }
+  if (myGeneration !== writeGeneration) return true;
   // ここまで(約23秒)確認できなければ、念のため一度だけ送信し直して、もう少しだけ待つ
   console.warn("反映を確認できなかったため再送信します");
   lastLocalWriteAt = Date.now();
@@ -457,6 +473,7 @@ async function pushStateWithRetry(idx, ts) {
     console.error("再送信に失敗しました", e);
   }
   await sleep(4000);
+  if (myGeneration !== writeGeneration) return true;
   try {
     const confirmed = await fetchSharedState();
     if (confirmed && confirmed.updatedAt === ts) return true;
@@ -473,8 +490,11 @@ async function pushState(idx) {
   lastLocalWriteAt = Date.now();
   forceScrollNext = true; // 運営が自分でボタンを押した時は、直前の手動スクロールに関係なく必ず追従する
   render();
+  writeGeneration += 1;
+  const myGeneration = writeGeneration;
   const hadError = state.saveError;
-  const ok = await pushStateWithRetry(idx, ts);
+  const ok = await pushStateWithRetry(idx, ts, myGeneration);
+  if (myGeneration !== writeGeneration) return; // さらに新しい操作が行われていたら、この結果は無視する
   state.saveError = !ok;
   if (state.saveError !== hadError) render();
 }
