@@ -46,6 +46,25 @@
   ::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 4px; }
   input:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 
+  .loading-spinner {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    animation: loading-spin 0.8s linear infinite;
+  }
+  .loading-spinner-sm { width: 16px; height: 16px; border-width: 2px; }
+  @keyframes loading-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .loading-spinner { animation: none; }
+  }
+
+  .now-card-loading { display: flex; flex-direction: column; }
+  .now-loading-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .now-loading-text { font-size: 14px; font-weight: 700; color: var(--text-dim); }
+  .controls-loading-note {
+    display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-dim);
+    padding: 6px 2px 0;
+  }
+
   header {
     /* --collapse は 0(展開)〜1(折りたたみ) の連続値。スクロール量にそのまま連動させ、
        しきい値やCSSトランジションを介さないことで、どんな速度のスクロールでも
@@ -377,6 +396,8 @@ const state = {
   currentIdx: 0,
   updatedAt: null,
   loaded: false,
+  confirmed: false, // サーバーから一度でも本物のデータを取得できたか(falseの間は「読み込み中」画面を出し、
+                     // 初期値のNO.1を本物のデータであるかのように見せてしまうのを防ぐ)
   saveError: false,
   loadError: false,
   pendingRender: false,
@@ -426,6 +447,7 @@ async function fetchState() {
     // 古いデータで巻き戻ってしまうことがあるため、少しの間はpollの結果を無視する
     if (Date.now() - lastLocalWriteAt < WRITE_GRACE_MS) {
       state.loaded = true;
+      state.confirmed = true; // 自分がさっき書いた値は信頼できるので、確定データとして扱ってよい
       state.consecutiveFailures = 0;
       return;
     }
@@ -443,6 +465,7 @@ async function fetchState() {
 
     const wasFirstLoad = !state.loaded;
     state.loaded = true;
+    state.confirmed = true; // サーバーから実際のデータを取得できた(＝画面の内容は信頼できる)
 
     // 変化がない時は再描画しない(スクロール位置を保持するため)
     if (!changed && !hadError && !hadFailures && !wasFirstLoad) return;
@@ -581,6 +604,15 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
 }
 
+function renderNowCardLoading() {
+  return `<section class="now-card now-card-loading"><div class="now-label">NOW</div>
+    <div class="now-loading-row"><span class="loading-spinner loading-spinner-sm"></span><span class="now-loading-text">読み込み中…</span></div>
+  </section>`;
+}
+function renderNowInlineLoading() {
+  return `<span class="loading-spinner loading-spinner-sm"></span><span class="now-loading-text">読み込み中…</span>`;
+}
+
 function renderNowCard(current) {
   const tone = sectionTone(current.section);
   let body;
@@ -638,10 +670,11 @@ function render() {
   const controlsHtml = state.mode === "staff" ? `
     <div class="controls-sticky">
       <div class="controls">
-        <button class="ctrl-btn" ${state.currentIdx === 0 ? "disabled" : ""} onclick="goPrev()">${icon("chevleft",18)} 戻す</button>
-        <button class="ctrl-btn ${state.confirmReset ? "ctrl-confirm" : "ctrl-ghost"}" onclick="resetAll()">${icon("reset",16)} ${state.confirmReset ? "本当に最初へ？" : "最初へ"}</button>
-        <button class="ctrl-btn ctrl-primary" ${state.currentIdx === ITEMS.length - 1 ? "disabled" : ""} onclick="goNext()">進める ${icon("chevright",18)}</button>
+        <button class="ctrl-btn" ${(!state.confirmed || state.currentIdx === 0) ? "disabled" : ""} onclick="goPrev()">${icon("chevleft",18)} 戻す</button>
+        <button class="ctrl-btn ${state.confirmReset ? "ctrl-confirm" : "ctrl-ghost"}" ${!state.confirmed ? "disabled" : ""} onclick="resetAll()">${icon("reset",16)} ${state.confirmReset ? "本当に最初へ？" : "最初へ"}</button>
+        <button class="ctrl-btn ctrl-primary" ${(!state.confirmed || state.currentIdx === ITEMS.length - 1) ? "disabled" : ""} onclick="goNext()">進める ${icon("chevright",18)}</button>
       </div>
+      ${!state.confirmed ? `<div class="controls-loading-note">${icon("clock",12)} 同期を待っています…操作はまだできません</div>` : ""}
     </div>
     <div class="link-row">
       <button class="link-btn ${state.linkCopied ? "copied" : ""}" onclick="copyViewerLink()">${state.linkCopied ? "コピーしました" : "観覧用リンクをコピー"}</button>
@@ -661,7 +694,7 @@ function render() {
 
   const rowsHtml = visibleItems.map((item) => {
     const idx = ITEMS.indexOf(item);
-    const rstate = idx < state.currentIdx ? "done" : idx === state.currentIdx ? "current" : "upcoming";
+    const rstate = !state.confirmed ? "upcoming" : idx < state.currentIdx ? "done" : idx === state.currentIdx ? "current" : "upcoming";
     const tone = sectionTone(item.section);
     const rowClasses = ["row", rstate === "current" ? "current" : "", rstate === "done" ? "done" : ""].filter(Boolean).join(" ");
 
@@ -712,14 +745,14 @@ function render() {
       </div>
       ${setupNotice}
       ${pinHtml}
-      <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
-      <div class="progress-label">NO.${current.no} / ${ITEMS.length}　${progressPct}%</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${state.confirmed ? progressPct : 0}%"></div></div>
+      <div class="progress-label">${state.confirmed ? `NO.${current.no} / ${ITEMS.length}　${progressPct}%` : "NO.-- / " + ITEMS.length}</div>
     </header>
 
     <div class="now-sticky">
       ${syncWarningHtml}
-      <div class="now-card-wrap">${renderNowCard(current)}</div>
-      <div class="now-inline">${renderNowInline(current)}</div>
+      <div class="now-card-wrap">${state.confirmed ? renderNowCard(current) : renderNowCardLoading()}</div>
+      <div class="now-inline">${state.confirmed ? renderNowInline(current) : renderNowInlineLoading()}</div>
     </div>
 
     ${controlsHtml}
